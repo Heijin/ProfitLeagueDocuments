@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/painting.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
 import 'dart:convert';
+import 'dart:io';
 import 'dart:typed_data';
 import 'package:intl/intl.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:profit_league_documents/shared/auth_storage.dart';
 import '../../../api/models/document.dart';
 import '../../../api/models/photo.dart';
@@ -26,6 +29,13 @@ class _DocumentPhotosScreenState extends State<DocumentPhotosScreen> {
   bool _isSending = false;
   bool _isLoading = false;
 
+  @override
+  void dispose() {
+    PaintingBinding.instance.imageCache.clear();
+    _nameController.dispose();
+    super.dispose();
+  }
+
   Future<void> _saveDocuments() async {
     final documents = await _storage.getDocuments();
     if (documents != null) {
@@ -44,9 +54,8 @@ class _DocumentPhotosScreenState extends State<DocumentPhotosScreen> {
   Widget build(BuildContext context) {
     return WillPopScope(
       onWillPop: () async {
-        // Перехватываем любой возврат (стрелка, жест, кнопка "Назад")
         Navigator.pop(context, widget.document);
-        return true; // Разрешаем возврат
+        return true;
       },
       child: Scaffold(
         appBar: AppBar(
@@ -68,6 +77,7 @@ class _DocumentPhotosScreenState extends State<DocumentPhotosScreen> {
             : widget.document.photos.isEmpty
             ? Center(child: Text('Нет фотографий'))
             : ListView.builder(
+          cacheExtent: 500,
           itemCount: widget.document.photos.length,
           itemBuilder: (context, index) {
             final photo = widget.document.photos[index];
@@ -142,15 +152,20 @@ class _DocumentPhotosScreenState extends State<DocumentPhotosScreen> {
     );
 
     if (images != null && images.isNotEmpty) {
+      final directory = await getApplicationDocumentsDirectory();
       for (final image in images) {
         final bytes = await image.readAsBytes();
-        final base64Image = base64Encode(bytes);
         final timestamp = DateFormat('yyyy-MM-dd-HH-mm-ss').format(DateTime.now());
+        final fileName = '$timestamp-${images.indexOf(image)}.jpg';
+        final filePath = '${directory.path}/photos/$fileName';
+        final file = File(filePath);
+        await file.create(recursive: true);
+        await file.writeAsBytes(bytes);
 
         setState(() {
           widget.document.photos.insert(0, Photo(
             name: '$timestamp-${images.indexOf(image)}',
-            base64: base64Image,
+            filePath: filePath,
             ext: 'jpg',
             uploaded: false,
           ));
@@ -168,13 +183,18 @@ class _DocumentPhotosScreenState extends State<DocumentPhotosScreen> {
 
     if (image != null) {
       final bytes = await image.readAsBytes();
-      final base64Image = base64Encode(bytes);
       final timestamp = DateFormat('yyyy-MM-dd-HH-mm-ss').format(DateTime.now());
+      final directory = await getApplicationDocumentsDirectory();
+      final fileName = '$timestamp.jpg';
+      final filePath = '${directory.path}/photos/$fileName';
+      final file = File(filePath);
+      await file.create(recursive: true);
+      await file.writeAsBytes(bytes);
 
       setState(() {
         widget.document.photos.insert(0, Photo(
           name: timestamp,
-          base64: base64Image,
+          filePath: filePath,
           ext: 'jpg',
           uploaded: false,
         ));
@@ -189,17 +209,12 @@ class _DocumentPhotosScreenState extends State<DocumentPhotosScreen> {
 
   Widget _buildPhotoPreview(Photo photo) {
     try {
-      String base64String = photo.base64;
-      if (base64String.contains(',')) {
-        base64String = base64String.split(',').last;
-      }
-
-      final bytes = base64.decode(base64String);
-
-      return Image.memory(
-        bytes,
+      return Image.file(
+        File(photo.filePath),
         fit: BoxFit.contain,
         height: 200,
+        cacheHeight: 200,
+        cacheWidth: 200,
         errorBuilder: (context, error, stackTrace) {
           return Container(
             height: 200,
@@ -247,16 +262,11 @@ class _DocumentPhotosScreenState extends State<DocumentPhotosScreen> {
 
   Widget _buildFullScreenPhoto(Photo photo) {
     try {
-      String base64String = photo.base64;
-      if (base64String.contains(',')) {
-        base64String = base64String.split(',').last;
-      }
-
-      final bytes = base64.decode(base64String);
-
-      return Image.memory(
-        bytes,
+      return Image.file(
+        File(photo.filePath),
         fit: BoxFit.contain,
+        cacheHeight: 800,
+        cacheWidth: 800,
       );
     } catch (e) {
       return Center(
@@ -333,11 +343,7 @@ class _DocumentPhotosScreenState extends State<DocumentPhotosScreen> {
 
   Future<void> _editPhotoWithEditor(int index) async {
     final photo = widget.document.photos[index];
-    String base64String = photo.base64;
-    if (base64String.contains(',')) {
-      base64String = base64String.split(',').last;
-    }
-    final bytes = base64.decode(base64String);
+    final bytes = await File(photo.filePath).readAsBytes();
 
     Navigator.push(
       context,
@@ -347,10 +353,17 @@ class _DocumentPhotosScreenState extends State<DocumentPhotosScreen> {
           key: UniqueKey(),
           callbacks: ProImageEditorCallbacks(
             onImageEditingComplete: (Uint8List resultBytes) async {
+              final directory = await getApplicationDocumentsDirectory();
+              final fileName = '${photo.name}_${DateTime.now().millisecondsSinceEpoch}.jpg';
+              final filePath = '${directory.path}/photos/$fileName';
+              final file = File(filePath);
+              await file.create(recursive: true);
+              await file.writeAsBytes(resultBytes);
+
               setState(() {
                 widget.document.photos[index] = Photo(
                   name: photo.name,
-                  base64: base64Encode(resultBytes),
+                  filePath: filePath,
                   ext: 'jpg',
                   uploaded: false,
                 );
@@ -385,17 +398,47 @@ class _DocumentPhotosScreenState extends State<DocumentPhotosScreen> {
 
     if (confirmed == true) {
       setState(() {
-        widget.document.photos.removeAt(index);
+        final photo = widget.document.photos.removeAt(index);
+        File(photo.filePath).deleteSync();
         widget.document.numberOfPhotos = widget.document.photos.where((p) => p.uploaded).length;
       });
       await _saveDocuments();
     }
   }
 
+  String _getMimeType(String ext) {
+    switch (ext.toLowerCase()) {
+      case 'jpg':
+      case 'jpeg':
+        return 'image/jpeg';
+      case 'png':
+        return 'image/png';
+      case 'gif':
+        return 'image/gif';
+      default:
+        return 'image/jpeg'; // По умолчанию для неизвестных расширений
+    }
+  }
+
   Future<void> _sendSinglePhotoToServer(Photo photo) async {
     try {
       setState(() => _isSending = true);
-      await _apiClient.sendPhotoToBackend(photo, widget.document.navLink);
+      final bytes = await File(photo.filePath).readAsBytes();
+      final base64Image = base64Encode(bytes);
+      final mimeType = _getMimeType(photo.ext);
+      final dataUrl = 'data:$mimeType;base64,$base64Image';
+
+      print('Sending photo ${photo.name} with data URL: ${dataUrl.substring(0, 100)}...'); // Отладочный вывод
+
+      await _apiClient.sendPhotoToBackend(
+        Photo(
+          name: photo.name,
+          filePath: dataUrl, // Передаём Data URL вместо filePath
+          ext: photo.ext,
+          uploaded: photo.uploaded,
+        ),
+        widget.document.navLink,
+      );
       setState(() {
         photo.uploaded = true;
         widget.document.numberOfPhotos = widget.document.photos.where((p) => p.uploaded).length;
@@ -463,7 +506,22 @@ class _DocumentPhotosScreenState extends State<DocumentPhotosScreen> {
         if (!shouldContinue) break;
 
         try {
-          await _apiClient.sendPhotoToBackend(photo, widget.document.navLink);
+          final bytes = await File(photo.filePath).readAsBytes();
+          final base64Image = base64Encode(bytes);
+          final mimeType = _getMimeType(photo.ext);
+          final dataUrl = 'data:$mimeType;base64,$base64Image';
+
+          print('Sending photo ${photo.name} with data URL: ${dataUrl.substring(0, 100)}...'); // Отладочный вывод
+
+          await _apiClient.sendPhotoToBackend(
+            Photo(
+              name: photo.name,
+              filePath: dataUrl, // Передаём Data URL вместо filePath
+              ext: photo.ext,
+              uploaded: photo.uploaded,
+            ),
+            widget.document.navLink,
+          );
           setState(() {
             photo.uploaded = true;
             successCount++;
@@ -479,7 +537,7 @@ class _DocumentPhotosScreenState extends State<DocumentPhotosScreen> {
         }
       }
 
-      Navigator.pop(context); // Закрываем диалог прогресса
+      Navigator.pop(context);
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(

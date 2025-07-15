@@ -1,6 +1,8 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:lottie/lottie.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:profit_league_documents/api/api_client.dart';
 import 'package:profit_league_documents/features/documents/screens/document_photos_screen.dart';
 import 'package:profit_league_documents/features/documents/screens/qr_scanner_screen.dart';
@@ -53,23 +55,36 @@ class _DocumentScreenState extends State<DocumentScreen> {
         builder: (_) => const LoadingOverlay(),
       );
 
-      final response = await widget.apiClient.get(
-        '/docPhoto?navLink=${doc.navLink}',
-      );
+      final response = await widget.apiClient.get('/docPhoto?navLink=${doc.navLink}');
       if (!mounted) return;
       final List<dynamic> data = json.decode(response.body);
-      setState(() {
-        doc.photos = data.map((item) => Photo(
+      final directory = await getApplicationDocumentsDirectory();
+
+      doc.photos = await Future.wait(data.map((item) async {
+        String base64 = item['base64'];
+        // Удаляем префикс Data URL, если он присутствует
+        if (base64.startsWith('data:image/')) {
+          base64 = base64.split(',').last;
+        }
+        final fileName = '${item['name']}_${DateTime.now().millisecondsSinceEpoch}.${item['ext']}';
+        final filePath = '${directory.path}/photos/$fileName';
+        final file = File(filePath);
+        await file.create(recursive: true);
+        await file.writeAsBytes(base64Decode(base64));
+        return Photo(
           name: item['name'],
-          base64: item['base64'],
+          filePath: filePath,
           ext: item['ext'],
           uploaded: item['uploaded'],
-        )).toList();
+        );
+      }).toList());
+
+      setState(() {
         doc.numberOfPhotos = doc.photos.where((p) => p.uploaded).length;
       });
       await _saveDocuments();
 
-      Navigator.of(context).pop(); // Закрываем лоадер
+      Navigator.of(context).pop();
 
       if (doc.photos.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -78,14 +93,14 @@ class _DocumentScreenState extends State<DocumentScreen> {
       }
     } on ApiException catch (e) {
       if (mounted) {
-        Navigator.of(context).pop(); // Закрываем лоадер
+        Navigator.of(context).pop();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Ошибка: ${e.message}')),
         );
       }
     } catch (e) {
       if (mounted) {
-        Navigator.of(context).pop(); // Закрываем лоадер
+        Navigator.of(context).pop();
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Ошибка загрузки фотографий')),
         );
@@ -225,7 +240,7 @@ class _DocumentScreenState extends State<DocumentScreen> {
       }
     } finally {
       if (mounted) {
-        Navigator.of(context).pop(); // Закрываем лоадер
+        Navigator.of(context).pop();
       }
     }
   }
@@ -448,7 +463,7 @@ class LoadingOverlay extends StatelessWidget {
         ),
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: Colors.white, // Полностью непрозрачный белый фон
+          color: Colors.white,
           borderRadius: BorderRadius.circular(10),
           boxShadow: [
             BoxShadow(
@@ -468,7 +483,7 @@ class LoadingOverlay extends StatelessWidget {
                 width: 100,
                 height: 100,
                 fit: BoxFit.contain,
-                backgroundLoading: true, // Загрузка в фоне для избежания артефактов
+                backgroundLoading: true,
               ),
             ),
             const SizedBox(height: 16),

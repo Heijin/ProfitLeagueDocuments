@@ -9,7 +9,7 @@ class ApiClient {
   //static const String _baseHost = '10.0.17.18:81';
   static const String _basePath = '/trade11-photoSave/hs/PhotoSave';
   //static const String _basePath = '/trade115-tkach-photoSave/hs/PhotoSave';
-  static const bool _useHttps = true; // Переключатель схемы (true для https, false для http)
+  static const bool _useHttps = true;
 
   final http.Client _http = http.Client();
   final AuthStorage _storage = AuthStorage();
@@ -101,6 +101,14 @@ class ApiClient {
       final token = await _storage.getAccessToken();
       final uri = _buildUri('/docPhoto', queryParameters: {'navLink': navLink});
 
+      String base64Image = photo.filePath;
+      // Удаляем префикс Data URL, если он присутствует
+      if (base64Image.startsWith('data:image/')) {
+        base64Image = base64Image.split(',').last;
+      }
+
+      print('Sending base64 for photo ${photo.name}: ${base64Image.substring(0, 100)}...'); // Отладочный вывод
+
       final response = await _http.post(
         uri,
         headers: {
@@ -108,7 +116,7 @@ class ApiClient {
           'Content-Type': 'application/json; charset=utf-8',
         },
         body: jsonEncode({
-          'base64': photo.base64,
+          'base64': base64Image,
           'name': photo.name,
           'ext': photo.ext,
         }),
@@ -170,7 +178,7 @@ class ApiClient {
       final data = jsonDecode(response.body);
       if (data['code'] == 'TOKEN_EXPIRED') {
         await refreshToken();
-        return await requestFn(); // retry original request
+        return await requestFn();
       }
     }
     return response;

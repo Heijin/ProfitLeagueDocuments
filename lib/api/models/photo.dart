@@ -1,12 +1,12 @@
 class Photo {
   String name;
-  final String base64;
+  final String filePath;
   final String ext;
   bool uploaded;
 
   Photo({
     required this.name,
-    required this.base64,
+    required this.filePath,
     required this.ext,
     required this.uploaded,
   });
@@ -14,7 +14,7 @@ class Photo {
   factory Photo.fromJson(Map<String, dynamic> json) {
     return Photo(
       name: json['name'] as String? ?? 'Unnamed',
-      base64: json['base64'] as String? ?? '',
+      filePath: json['filePath'] as String? ?? '',
       ext: json['ext'] as String? ?? 'jpg',
       uploaded: json['uploaded'] as bool? ?? false,
     );
@@ -23,7 +23,7 @@ class Photo {
   Map<String, dynamic> toJson() {
     return {
       'name': name,
-      'base64': base64,
+      'filePath': filePath,
       'ext': ext,
       'uploaded': uploaded,
     };
