@@ -28,17 +28,46 @@ class _DocumentScreenState extends State<DocumentScreen> {
   @override
   void initState() {
     super.initState();
+    _clearPhotoCache(); // Очищаем кэш фотографий при запуске
     _loadDocuments();
   }
 
+  Future<void> _clearPhotoCache() async {
+    try {
+      final directory = await getApplicationDocumentsDirectory();
+      final photoDir = Directory('${directory.path}/photos');
+      if (await photoDir.exists()) {
+        await photoDir.delete(recursive: true);
+        debugPrint('Photo cache cleared: ${photoDir.path}');
+      } else {
+        debugPrint('Photo cache directory does not exist: ${photoDir.path}');
+      }
+      // Пересоздаём папку, чтобы избежать ошибок при последующем сохранении
+      await photoDir.create(recursive: true);
+    } catch (e) {
+      debugPrint('Error clearing photo cache: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Ошибка при очистке кэша фотографий: $e')),
+      );
+    }
+  }
+
   Future<void> _loadDocuments() async {
-    final storedData = await _storage.getDocuments();
-    if (storedData != null) {
-      setState(() {
-        documents = (jsonDecode(storedData) as List<dynamic>)
-            .map((e) => Document.fromJson(e))
-            .toList();
-      });
+    try {
+      final storedData = await _storage.getDocuments();
+      if (storedData != null) {
+        setState(() {
+          documents = (jsonDecode(storedData) as List<dynamic>)
+              .map((e) => Document.fromJson(e))
+              .toList();
+        });
+      }
+    } catch (e) {
+      debugPrint('Error loading documents: $e');
+      await _storage.clearDocuments();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Данные документов сброшены из-за несовместимости')),
+      );
     }
   }
 
@@ -269,8 +298,9 @@ class _DocumentScreenState extends State<DocumentScreen> {
         documents.clear();
       });
       await _storage.clearDocuments();
+      await _clearPhotoCache(); // Очищаем кэш фотографий при очистке документов
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Список документов очищен')),
+        const SnackBar(content: Text('Список документов и кэш фотографий очищены')),
       );
     }
   }
