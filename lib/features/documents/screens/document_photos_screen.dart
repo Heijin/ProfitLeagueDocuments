@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/painting.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
 import 'dart:convert';
@@ -11,6 +10,7 @@ import 'package:profit_league_documents/shared/auth_storage.dart';
 import '../../../api/models/document.dart';
 import '../../../api/models/photo.dart';
 import '../../../api/api_client.dart';
+import 'package:photo_view/photo_view.dart';
 
 class DocumentPhotosScreen extends StatefulWidget {
   final Document document;
@@ -208,32 +208,38 @@ class _DocumentPhotosScreenState extends State<DocumentPhotosScreen> {
   }
 
   Widget _buildPhotoPreview(Photo photo) {
-    try {
-      return Image.file(
-        File(photo.filePath),
-        fit: BoxFit.contain,
-        height: 200,
-        cacheHeight: 200,
-        cacheWidth: 200,
-        errorBuilder: (context, error, stackTrace) {
+    return FutureBuilder<Size>(
+      future: _getImageSize(photo.filePath),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) {
           return Container(
             height: 200,
             color: Colors.grey[200],
-            child: Center(
-              child: Text('Ошибка отображения изображения'),
-            ),
+            child: const Center(child: CircularProgressIndicator()),
           );
-        },
-      );
-    } catch (e) {
-      return Container(
-        height: 200,
-        color: Colors.grey[200],
-        child: Center(
-          child: Text('Некорректные данные изображения'),
-        ),
-      );
-    }
+        }
+        final aspectRatio = snapshot.data!.width / snapshot.data!.height;
+        return AspectRatio(
+          aspectRatio: aspectRatio,
+          child: Image.file(
+            File(photo.filePath),
+            fit: BoxFit.contain,
+            errorBuilder: (context, error, stackTrace) {
+              return Container(
+                color: Colors.grey[200],
+                child: const Center(child: Text('Ошибка отображения изображения')),
+              );
+            },
+          ),
+        );
+      },
+    );
+  }
+
+  Future<Size> _getImageSize(String path) async {
+    final bytes = await File(path).readAsBytes();
+    final image = await decodeImageFromList(bytes);
+    return Size(image.width.toDouble(), image.height.toDouble());
   }
 
   void _showFullScreenPhoto(Photo photo) {
@@ -241,17 +247,18 @@ class _DocumentPhotosScreenState extends State<DocumentPhotosScreen> {
       context,
       MaterialPageRoute(
         builder: (context) => Scaffold(
+          backgroundColor: Colors.black,
           appBar: AppBar(
             backgroundColor: Colors.black,
             foregroundColor: Colors.white,
           ),
-          body: Center(
-            child: InteractiveViewer(
-              panEnabled: true,
-              minScale: 0.5,
-              maxScale: 3.0,
-              child: _buildFullScreenPhoto(photo),
-            ),
+          body: PhotoView(
+            imageProvider: FileImage(File(photo.filePath)),
+            backgroundDecoration: BoxDecoration(color: Colors.black),
+            minScale: PhotoViewComputedScale.contained,
+            maxScale: PhotoViewComputedScale.covered * 3,
+            errorBuilder: (context, error, stackTrace) =>
+                Center(child: Text('Ошибка отображения изображения')),
           ),
           floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
           floatingActionButton: _buildUploadButtonIfNeeded(photo),
