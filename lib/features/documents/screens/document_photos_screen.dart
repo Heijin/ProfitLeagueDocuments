@@ -55,8 +55,34 @@ class _DocumentPhotosScreenState extends State<DocumentPhotosScreen> {
   Widget build(BuildContext context) {
     return WillPopScope(
       onWillPop: () async {
-        Navigator.pop(context, widget.document);
-        return true;
+        if (_hasUnuploadedPhotos()) {
+          final shouldExit = await showDialog<bool>(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: Text('Есть не отправленные фотографии'),
+              content: Text('Вы действительно хотите выйти без отправки?'),
+              actions: [
+                TextButton(
+                  child: Text('Остаться'),
+                  onPressed: () => Navigator.of(context).pop(false),
+                ),
+                TextButton(
+                  child: Text('Выйти'),
+                  onPressed: () => Navigator.of(context).pop(true),
+                ),
+              ],
+            ),
+          );
+          if (shouldExit == true) {
+            Navigator.pop(context, widget.document);
+            return true;
+          } else {
+            return false;
+          }
+        } else {
+          Navigator.pop(context, widget.document);
+          return true;
+        }
       },
       child: Scaffold(
         appBar: AppBar(
