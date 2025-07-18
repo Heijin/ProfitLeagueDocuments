@@ -64,4 +64,8 @@ class AuthStorage {
   Future<void> clear() async {
     await _storage.deleteAll();
   }
+
+  Future<void> saveEmail(String email) async {
+    await _storage.write(key: _kEmail, value: email);
+  }
 }
