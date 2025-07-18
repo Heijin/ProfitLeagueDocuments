@@ -11,6 +11,7 @@ import '../../../api/models/document.dart';
 import '../../../api/models/photo.dart';
 import '../../../api/api_client.dart';
 import 'package:photo_view/photo_view.dart';
+import 'package:percent_indicator/percent_indicator.dart';
 
 class DocumentPhotosScreen extends StatefulWidget {
   final Document document;
@@ -267,21 +268,6 @@ class _DocumentPhotosScreenState extends State<DocumentPhotosScreen> {
     );
   }
 
-  Widget _buildFullScreenPhoto(Photo photo) {
-    try {
-      return Image.file(
-        File(photo.filePath),
-        fit: BoxFit.contain,
-        cacheHeight: 800,
-        cacheWidth: 800,
-      );
-    } catch (e) {
-      return Center(
-        child: Text('Ошибка отображения изображения'),
-      );
-    }
-  }
-
   Widget _buildUploadButtonIfNeeded(Photo photo) {
     if (photo.uploaded) return SizedBox.shrink();
 
@@ -478,86 +464,111 @@ class _DocumentPhotosScreenState extends State<DocumentPhotosScreen> {
     int successCount = 0;
     int failCount = 0;
     String lastError = '';
-
     bool shouldContinue = true;
-    showDialog(
+    bool hasStartedSending = false;
+
+    await showDialog(
       context: context,
       barrierDismissible: false,
       builder: (context) {
-        return AlertDialog(
-          title: Text('Отправка фотографий'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              CircularProgressIndicator(),
-              SizedBox(height: 16),
-              Text('Отправлено: $successCount из ${unuploadedPhotos.length}'),
-              if (failCount > 0) Text('Ошибок: $failCount', style: TextStyle(color: Colors.red)),
-            ],
-          ),
-          actions: [
-            TextButton(
-              child: Text('Отмена'),
-              onPressed: () {
-                shouldContinue = false;
-                Navigator.pop(context);
-              },
-            ),
-          ],
+        return StatefulBuilder(
+          builder: (context, setStateDialog) {
+            Future<void> sendPhotos() async {
+              for (final photo in unuploadedPhotos) {
+                if (!shouldContinue) break;
+
+                try {
+                  final bytes = await File(photo.filePath).readAsBytes();
+                  final base64Image = base64Encode(bytes);
+                  final mimeType = _getMimeType(photo.ext);
+                  final dataUrl = 'data:$mimeType;base64,$base64Image';
+
+                  await _apiClient.sendPhotoToBackend(
+                    Photo(
+                      name: photo.name,
+                      filePath: dataUrl,
+                      ext: photo.ext,
+                      uploaded: photo.uploaded,
+                    ),
+                    widget.document.navLink,
+                  );
+
+                  setState(() {
+                    photo.uploaded = true;
+                    widget.document.numberOfPhotos = widget.document.photos.where((p) => p.uploaded).length;
+                  });
+                  await _saveDocuments();
+
+                  successCount++;
+                } catch (e) {
+                  failCount++;
+                  lastError = e.toString();
+                }
+
+                setStateDialog(() {});
+              }
+
+              if (Navigator.canPop(context)) {
+                Navigator.of(context).pop();
+              }
+            }
+
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (!hasStartedSending) {
+                hasStartedSending = true;
+                sendPhotos();
+              }
+            });
+
+            double progressPercent = unuploadedPhotos.isEmpty
+                ? 0
+                : successCount / unuploadedPhotos.length;
+
+            return AlertDialog(
+              title: Text('Отправка фотографий'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  CircularPercentIndicator(
+                    radius: 60.0,
+                    lineWidth: 8.0,
+                    percent: progressPercent.clamp(0.0, 1.0),
+                    center: Text('${(progressPercent * 100).toStringAsFixed(0)}%'),
+                    progressColor: Colors.green,
+                  ),
+                  SizedBox(height: 16),
+                  Text('Отправлено: $successCount из ${unuploadedPhotos.length}'),
+                  if (failCount > 0)
+                    Text('Ошибок: $failCount', style: TextStyle(color: Colors.red)),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  child: Text('Отмена'),
+                  onPressed: () {
+                    shouldContinue = false;
+                    Navigator.of(context).pop();
+                  },
+                ),
+              ],
+            );
+          },
         );
       },
     );
 
-    try {
-      for (final photo in unuploadedPhotos) {
-        if (!shouldContinue) break;
-
-        try {
-          final bytes = await File(photo.filePath).readAsBytes();
-          final base64Image = base64Encode(bytes);
-          final mimeType = _getMimeType(photo.ext);
-          final dataUrl = 'data:$mimeType;base64,$base64Image';
-
-          print('Sending photo ${photo.name} with data URL: ${dataUrl.substring(0, 100)}...'); // Отладочный вывод
-
-          await _apiClient.sendPhotoToBackend(
-            Photo(
-              name: photo.name,
-              filePath: dataUrl, // Передаём Data URL вместо filePath
-              ext: photo.ext,
-              uploaded: photo.uploaded,
-            ),
-            widget.document.navLink,
-          );
-          setState(() {
-            photo.uploaded = true;
-            successCount++;
-            widget.document.numberOfPhotos = widget.document.photos.where((p) => p.uploaded).length;
-          });
-          await _saveDocuments();
-        } on ApiException catch (e) {
-          failCount++;
-          lastError = e.message;
-        } catch (e) {
-          failCount++;
-          lastError = e.toString();
-        }
-      }
-
-      Navigator.pop(context);
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            failCount == 0
-                ? 'Все фото успешно отправлены ($successCount)'
-                : 'Отправлено $successCount, ошибок: $failCount ($lastError)',
-          ),
-          duration: Duration(seconds: 5),
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          failCount == 0
+              ? 'Все фото успешно отправлены ($successCount)'
+              : 'Отправлено $successCount, ошибок: $failCount ($lastError)',
         ),
-      );
-    } finally {
-      setState(() => _isSending = false);
-    }
+        duration: Duration(seconds: 5),
+      ),
+    );
+
+    setState(() => _isSending = false);
   }
+
 }

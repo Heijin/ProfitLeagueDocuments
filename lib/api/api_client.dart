@@ -107,7 +107,7 @@ class ApiClient {
         base64Image = base64Image.split(',').last;
       }
 
-      print('Sending base64 for photo ${photo.name}: ${base64Image.substring(0, 100)}...'); // Отладочный вывод
+      //print('Sending base64 for photo ${photo.name}: ${base64Image.substring(0, 100)}...'); // Отладочный вывод
 
       final response = await _http.post(
         uri,
