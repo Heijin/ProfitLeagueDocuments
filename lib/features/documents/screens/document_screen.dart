@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:lottie/lottie.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:profit_league_documents/api/api_client.dart';
 import 'package:profit_league_documents/features/documents/screens/document_photos_screen.dart';
@@ -11,6 +10,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter/gestures.dart';
 import '../../../api/models/document.dart';
 import '../../../api/models/photo.dart';
+import 'package:profit_league_documents/shared/widgets/loading_overlay.dart';
 
 class DocumentScreen extends StatefulWidget {
   final ApiClient apiClient;
@@ -480,53 +480,3 @@ class _DocumentScreenState extends State<DocumentScreen> {
   }
 }
 
-class LoadingOverlay extends StatelessWidget {
-  const LoadingOverlay({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Container(
-        constraints: const BoxConstraints(
-          maxWidth: 250,
-          maxHeight: 200,
-        ),
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(10),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black26,
-              blurRadius: 10,
-              offset: Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(10),
-              child: Lottie.asset(
-                'assets/animations/loader.json',
-                width: 100,
-                height: 100,
-                fit: BoxFit.contain,
-                backgroundLoading: true,
-              ),
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              'Загрузка данных...',
-              style: TextStyle(
-                color: Colors.black,
-                fontSize: 16,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}

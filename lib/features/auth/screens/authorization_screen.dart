@@ -137,6 +137,7 @@ class _AuthorizationScreenState extends State<AuthorizationScreen> {
                       controller: _emailController,
                       decoration: const InputDecoration(labelText: 'Почта'),
                       keyboardType: TextInputType.emailAddress,
+                      //style: TextStyle(color: Colors.black), // цвет текста при вводе
                       validator: (value) {
                         if (value == null || !RegExp(r'^\S+@\S+\.\S+$').hasMatch(value)) {
                           return 'Введите корректный email';
@@ -168,6 +169,7 @@ class _AuthorizationScreenState extends State<AuthorizationScreen> {
                             backgroundColor: Colors.green,
                             foregroundColor: Colors.white,
                             minimumSize: const Size.fromHeight(48),
+                            shadowColor: Colors.transparent,
                           ),
                           child: const Text('Войти'),
                         ),

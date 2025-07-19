@@ -157,6 +157,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                         backgroundColor: Colors.green,
                         foregroundColor: Colors.white,
                         minimumSize: const Size.fromHeight(48),
+                        shadowColor: Colors.transparent,
                       ),
                       child: const Text('Регистрация'),
                     ),

@@ -115,9 +115,11 @@ class _DocumentPhotosScreenState extends State<DocumentPhotosScreen> {
                 child: Column(
                   children: [
                     ListTile(
-                      title: Text(photo.name),
+                      title: Text(photo.name,
+                        style: const TextStyle(color: Colors.grey),),
                       subtitle: Text(
-                          '${photo.ext} • ${photo.uploaded ? 'Загружено' : 'Не загружено'}'),
+                          '${photo.ext} • ${photo.uploaded ? 'Загружено' : 'Не загружено'}',
+                          style: const TextStyle(color: Colors.grey),),
                     ),
                     Stack(
                       children: [
