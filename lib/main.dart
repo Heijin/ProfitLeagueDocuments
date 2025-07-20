@@ -19,6 +19,7 @@ class MyApp extends StatelessWidget {
       title: 'Документы',
       theme: ThemeData(
         primarySwatch: Colors.green,
+        fontFamily: 'Roboto', // Указываем sans-serif шрифт Roboto
         scaffoldBackgroundColor: Colors.white,
         appBarTheme: const AppBarTheme(
           backgroundColor: Colors.green,

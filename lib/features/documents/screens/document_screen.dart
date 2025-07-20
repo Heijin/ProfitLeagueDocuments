@@ -436,6 +436,7 @@ class _DocumentScreenState extends State<DocumentScreen> {
           },
           child: Card(
             margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            elevation: 0,
             child: ListTile(
               leading: IconButton(
                 icon: const Icon(Icons.shelves, color: Colors.blue),

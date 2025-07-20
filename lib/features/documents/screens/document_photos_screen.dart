@@ -110,6 +110,7 @@ class _DocumentPhotosScreenState extends State<DocumentPhotosScreen> {
             final photo = widget.document.photos[index];
             return Card(
               margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              elevation: 0,
               child: InkWell(
                 onTap: () => _showFullScreenPhoto(photo),
                 child: Column(
@@ -243,27 +244,34 @@ class _DocumentPhotosScreenState extends State<DocumentPhotosScreen> {
         if (!snapshot.hasData) {
           return Container(
             height: 200,
-            color: Colors.grey[200],
+            decoration: BoxDecoration(
+              color: Colors.grey[200],
+              borderRadius: BorderRadius.circular(12),
+            ),
             child: const Center(child: CircularProgressIndicator()),
           );
         }
         final aspectRatio = snapshot.data!.width / snapshot.data!.height;
         return AspectRatio(
           aspectRatio: aspectRatio,
-          child: Image.file(
-            File(photo.filePath),
-            fit: BoxFit.contain,
-            errorBuilder: (context, error, stackTrace) {
-              return Container(
-                color: Colors.grey[200],
-                child: const Center(child: Text('Ошибка отображения изображения')),
-              );
-            },
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(12), // Радиус скругления
+            child: Image.file(
+              File(photo.filePath),
+              fit: BoxFit.cover,  // Лучше смотрится со скруглениями
+              errorBuilder: (context, error, stackTrace) {
+                return Container(
+                  color: Colors.grey[200],
+                  child: const Center(child: Text('Ошибка отображения изображения')),
+                );
+              },
+            ),
           ),
         );
       },
     );
   }
+
 
   Future<Size> _getImageSize(String path) async {
     final bytes = await File(path).readAsBytes();
