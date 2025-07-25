@@ -4,12 +4,12 @@ import 'models/photo.dart';
 import 'package:profit_league_documents/shared/auth_storage.dart';
 
 class ApiClient {
-  static const String _baseHost = 'exchange.pr-lg.ru';
-  //static const String _baseHost = 'neptune.pr-lg.ru:81';
+  //static const String _baseHost = 'exchange.pr-lg.ru';
+  static const String _baseHost = 'neptune.pr-lg.ru:81';
   //static const String _baseHost = '10.0.17.18:81';
-  static const String _basePath = '/trade11-photoSave/hs/PhotoSave';
-  //static const String _basePath = '/trade115-tkach-photoSave/hs/PhotoSave';
-  static const bool _useHttps = true;
+  //static const String _basePath = '/trade11-photoSave/hs/PhotoSave';
+  static const String _basePath = '/trade115-tkach-photoSave/hs/PhotoSave';
+  static const bool _useHttps = false;
 
   final http.Client _http = http.Client();
   final AuthStorage _storage = AuthStorage();
@@ -66,7 +66,7 @@ class ApiClient {
       final response = await _http.get(
         uri,
         headers: {
-          'authorization1': '$token',
+          'token': '$token',
           'Content-Type': 'application/json',
         },
       );
@@ -83,7 +83,7 @@ class ApiClient {
       final response = await _http.post(
         uri,
         headers: {
-          'authorization1': '$token',
+          'token': '$token',
           'Content-Type': 'application/json',
         },
         body: jsonEncode({
@@ -112,7 +112,7 @@ class ApiClient {
       final response = await _http.post(
         uri,
         headers: {
-          'authorization1': '$token',
+          'token': '$token',
           'Content-Type': 'application/json; charset=utf-8',
         },
         body: jsonEncode({
@@ -133,7 +133,7 @@ class ApiClient {
       return _http.get(
         uri,
         headers: {
-          'authorization1': '$token',
+          'token': '$token',
           ...?headers,
         },
       );
@@ -148,7 +148,7 @@ class ApiClient {
       return _http.post(
         uri,
         headers: {
-          'authorization1': '$token',
+          'token': '$token',
           'Content-Type': 'application/json',
           ...?headers,
         },
@@ -197,6 +197,34 @@ class ApiClient {
       );
     }
   }
+
+  Future<void> registerPushToken(String pushToken) async {
+    await _ensureValidToken();
+    await _retryIfTokenExpired(() async {
+      final token = await _storage.getAccessToken();
+      final uri = _buildUri('/registerPushToken');
+
+      final response = await _http.post(
+        uri,
+        headers: {
+          'token': '$token',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({'pushToken': pushToken}),
+      );
+
+      if (response.statusCode != 200) {
+        throw ApiException(
+          code: 'PUSH_TOKEN_ERROR',
+          message: 'Не удалось зарегистрировать push-токен',
+          details: response.body,
+        );
+      }
+
+      return null;
+    });
+  }
+
 }
 
 class ApiException implements Exception {

@@ -28,7 +28,7 @@ class _DocumentScreenState extends State<DocumentScreen> {
   @override
   void initState() {
     super.initState();
-    _clearPhotoCache(); // Очищаем кэш фотографий при запуске
+    _clearPhotoCache();
     _loadDocuments();
   }
 
@@ -42,7 +42,6 @@ class _DocumentScreenState extends State<DocumentScreen> {
       } else {
         debugPrint('Photo cache directory does not exist: ${photoDir.path}');
       }
-      // Пересоздаём папку, чтобы избежать ошибок при последующем сохранении
       await photoDir.create(recursive: true);
     } catch (e) {
       debugPrint('Error clearing photo cache: $e');
@@ -91,7 +90,6 @@ class _DocumentScreenState extends State<DocumentScreen> {
 
       doc.photos = await Future.wait(data.map((item) async {
         String base64 = item['base64'];
-        // Удаляем префикс Data URL, если он присутствует
         if (base64.startsWith('data:image/')) {
           base64 = base64.split(',').last;
         }
@@ -298,7 +296,7 @@ class _DocumentScreenState extends State<DocumentScreen> {
         documents.clear();
       });
       await _storage.clearDocuments();
-      await _clearPhotoCache(); // Очищаем кэш фотографий при очистке документов
+      await _clearPhotoCache();
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Список документов и кэш фотографий очищены')),
       );
@@ -439,7 +437,7 @@ class _DocumentScreenState extends State<DocumentScreen> {
             elevation: 0,
             child: ListTile(
               leading: IconButton(
-                icon: const Icon(Icons.shelves, color: Colors.blue),
+                icon: const Icon(Icons.shelves, color: Colors.blue, size: 40),
                 onPressed: () => _openScanner(isParkingScanner: true, document: doc),
               ),
               title: Text(
@@ -469,10 +467,9 @@ class _DocumentScreenState extends State<DocumentScreen> {
                 ],
               ),
               trailing: IconButton(
-                icon: const Icon(Icons.photo_library, color: Colors.green),
+                icon: const Icon(Icons.photo_library, color: Colors.green, size: 40),
                 onPressed: () => _navigateToPhotoScreen(context, doc),
               ),
-              onTap: () => _navigateToPhotoScreen(context, doc),
             ),
           ),
         );
@@ -480,4 +477,3 @@ class _DocumentScreenState extends State<DocumentScreen> {
     );
   }
 }
-
