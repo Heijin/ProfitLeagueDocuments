@@ -22,10 +22,11 @@ Flutter/Generated.xcconfig
 Flutter/ephemeral/
 Flutter/app.flx
 Flutter/app.zip
-Flutter/flutter_assets/
+Flutter/flutter_asbfg --delete-files google-services.jsonsets/
 Flutter/flutter_export_environment.sh
 ServiceDefinitions.json
 Runner/GeneratedPluginRegistrant.*
+Runner/GoogleService-Info.plist
 
 # Exceptions to above rules.
 !default.mode1v3
