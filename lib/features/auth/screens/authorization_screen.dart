@@ -1,11 +1,15 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:crypto/crypto.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:profit_league_documents/api/api_client.dart';
 import 'package:profit_league_documents/features/documents/screens/document_screen.dart';
 import 'package:profit_league_documents/features/auth/screens/registration_screen.dart';
 import 'package:profit_league_documents/shared/auth_storage.dart';
 import 'package:profit_league_documents/shared/widgets/company_footer.dart';
+import 'package:profit_league_documents/firebase/firebase_service.dart';
+import 'package:profit_league_documents/features/notifications/screens/push_details_screen.dart';
+import 'package:profit_league_documents/navigation_service.dart';
 
 class AuthorizationScreen extends StatefulWidget {
   final ApiClient apiClient;
@@ -66,6 +70,12 @@ class _AuthorizationScreenState extends State<AuthorizationScreen> {
         accessTokenExpiresAt: accessTokenExpiresAt,
       );
 
+      // 🔐 Отправка FCM токена
+      final fcmToken = await FirebaseMessaging.instance.getToken();
+      if (fcmToken != null) {
+        await widget.apiClient.registerPushToken(fcmToken);
+      }
+
       if (mounted) {
         Navigator.pushReplacement(
           context,
@@ -74,6 +84,18 @@ class _AuthorizationScreenState extends State<AuthorizationScreen> {
           ),
         );
       }
+
+      // ✅ После перехода на DocumentScreen — проверим initial push
+      final pushData = FirebaseService.consumeInitialPushData();
+      if (pushData != null) {
+        // используем глобальный navigatorKey
+        navigatorKey.currentState?.push(
+          MaterialPageRoute(
+            builder: (_) => PushDetailsScreen(data: pushData),
+          ),
+        );
+      }
+
     } on ApiException catch (e) {
       setState(() {
         _errorMessage = '${e.message}\n${e.details ?? ''}';
@@ -137,7 +159,6 @@ class _AuthorizationScreenState extends State<AuthorizationScreen> {
                       controller: _emailController,
                       decoration: const InputDecoration(labelText: 'Почта'),
                       keyboardType: TextInputType.emailAddress,
-                      //style: TextStyle(color: Colors.black), // цвет текста при вводе
                       validator: (value) {
                         if (value == null || !RegExp(r'^\S+@\S+\.\S+$').hasMatch(value)) {
                           return 'Введите корректный email';
