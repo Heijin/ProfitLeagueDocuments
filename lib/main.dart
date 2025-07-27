@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:profit_league_documents/api/api_client.dart';
 import 'package:profit_league_documents/features/auth/screens/authorization_screen.dart';
-import 'package:profit_league_documents/features/documents/screens/document_screen.dart';
 import 'package:profit_league_documents/features/notifications/screens/push_details_screen.dart';
 import 'package:profit_league_documents/shared/auth_storage.dart';
 import 'package:profit_league_documents/firebase/firebase_service.dart';
 import 'package:profit_league_documents/navigation_service.dart';
+import 'package:profit_league_documents/main_navigation.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -71,7 +71,8 @@ class _StartScreenState extends State<StartScreen> {
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(
-              builder: (_) => DocumentScreen(apiClient: widget.apiClient),
+              //builder: (_) => DocumentScreen(apiClient: widget.apiClient),
+              builder: (_) => MainNavigation(apiClient: widget.apiClient),
             ),
           );
 

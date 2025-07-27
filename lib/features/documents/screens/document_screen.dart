@@ -6,8 +6,6 @@ import 'package:profit_league_documents/api/api_client.dart';
 import 'package:profit_league_documents/features/documents/screens/document_photos_screen.dart';
 import 'package:profit_league_documents/features/documents/screens/qr_scanner_screen.dart';
 import 'package:profit_league_documents/shared/auth_storage.dart';
-import 'package:url_launcher/url_launcher.dart';
-import 'package:flutter/gestures.dart';
 import '../../../api/models/document.dart';
 import '../../../api/models/photo.dart';
 import 'package:profit_league_documents/shared/widgets/loading_overlay.dart';
@@ -313,27 +311,6 @@ class _DocumentScreenState extends State<DocumentScreen> {
     );
   }
 
-  Future<void> _launchWebsite(String url) async {
-    try {
-      final uri = Uri.parse(url.startsWith('http') ? url : 'https://$url');
-      if (await canLaunchUrl(uri)) {
-        await launchUrl(uri, mode: LaunchMode.externalApplication);
-      } else {
-        throw 'Cannot launch URL';
-      }
-    } catch (_) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Не удалось открыть ссылку'),
-          action: SnackBarAction(
-            label: 'Ручной переход',
-            onPressed: () => launchUrl(Uri.parse('https://pr-lg.ru')),
-          ),
-        ),
-      );
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -349,23 +326,6 @@ class _DocumentScreenState extends State<DocumentScreen> {
       body: Column(
         children: [
           Expanded(child: _buildDocumentList()),
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: RichText(
-              text: TextSpan(
-                style: const TextStyle(fontSize: 12, color: Colors.grey),
-                children: [
-                  const TextSpan(text: 'Для сотрудников компании '),
-                  TextSpan(
-                    text: '"Профит-Лига"',
-                    style: const TextStyle(color: Colors.blue),
-                    recognizer: TapGestureRecognizer()
-                      ..onTap = () => _launchWebsite('https://pr-lg.ru'),
-                  ),
-                ],
-              ),
-            ),
-          ),
         ],
       ),
       floatingActionButton: FloatingActionButton(

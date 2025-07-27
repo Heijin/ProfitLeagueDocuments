@@ -3,13 +3,13 @@ import 'package:flutter/material.dart';
 import 'package:crypto/crypto.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:profit_league_documents/api/api_client.dart';
-import 'package:profit_league_documents/features/documents/screens/document_screen.dart';
 import 'package:profit_league_documents/features/auth/screens/registration_screen.dart';
 import 'package:profit_league_documents/shared/auth_storage.dart';
 import 'package:profit_league_documents/shared/widgets/company_footer.dart';
 import 'package:profit_league_documents/firebase/firebase_service.dart';
 import 'package:profit_league_documents/features/notifications/screens/push_details_screen.dart';
 import 'package:profit_league_documents/navigation_service.dart';
+import 'package:profit_league_documents/main_navigation.dart';
 
 class AuthorizationScreen extends StatefulWidget {
   final ApiClient apiClient;
@@ -80,7 +80,8 @@ class _AuthorizationScreenState extends State<AuthorizationScreen> {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
-            builder: (context) => DocumentScreen(apiClient: widget.apiClient),
+            //builder: (context) => DocumentScreen(apiClient: widget.apiClient),
+            builder: (_) => MainNavigation(apiClient: widget.apiClient),
           ),
         );
       }
