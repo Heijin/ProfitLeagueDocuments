@@ -31,7 +31,9 @@ class _PushDetailsScreenState extends State<PushDetailsScreen> {
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Да'),
+            child: const Text('Да',
+              style: TextStyle(color: Colors.green),
+            ),
           ),
         ],
       ),

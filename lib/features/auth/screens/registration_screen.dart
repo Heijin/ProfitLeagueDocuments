@@ -153,12 +153,6 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                         ? const CircularProgressIndicator()
                         : ElevatedButton(
                       onPressed: _register,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.green,
-                        foregroundColor: Colors.white,
-                        minimumSize: const Size.fromHeight(48),
-                        shadowColor: Colors.transparent,
-                      ),
                       child: const Text('Регистрация'),
                     ),
                   ],

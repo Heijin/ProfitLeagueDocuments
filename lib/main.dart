@@ -24,6 +24,14 @@ class MyApp extends StatelessWidget {
       title: 'Документы',
       navigatorKey: navigatorKey,
       theme: ThemeData(
+        elevatedButtonTheme: ElevatedButtonThemeData(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.green,
+            foregroundColor: Colors.white,
+            minimumSize: const Size.fromHeight(48),
+            shadowColor: Colors.transparent,
+          ),
+        ),
         primarySwatch: Colors.green,
         fontFamily: 'Roboto',
         scaffoldBackgroundColor: Colors.white,
@@ -32,6 +40,13 @@ class MyApp extends StatelessWidget {
           foregroundColor: Colors.white,
           elevation: 0,
         ),
+
+        textButtonTheme: TextButtonThemeData(
+          style: TextButton.styleFrom(
+            foregroundColor: Colors.red, // цвет текста и ripple
+          ),
+        ),
+
       ),
       home: StartScreen(apiClient: _apiClient),
       debugShowCheckedModeBanner: false,

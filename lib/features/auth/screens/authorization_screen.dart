@@ -187,12 +187,6 @@ class _AuthorizationScreenState extends State<AuthorizationScreen> {
                       children: [
                         ElevatedButton(
                           onPressed: _login,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.green,
-                            foregroundColor: Colors.white,
-                            minimumSize: const Size.fromHeight(48),
-                            shadowColor: Colors.transparent,
-                          ),
                           child: const Text('Войти'),
                         ),
                         const SizedBox(height: 12),

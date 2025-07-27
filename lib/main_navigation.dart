@@ -3,13 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:profit_league_documents/api/api_client.dart';
 import 'package:profit_league_documents/features/documents/screens/document_screen.dart';
 import 'package:profit_league_documents/features/documents/screens/task_list_screen.dart';
+import 'package:profit_league_documents/features/settings/screens/settings_screen.dart';
 
-class SettingsScreen extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Center(child: Text('Настройки'));
-  }
-}
 
 class MainNavigation extends StatefulWidget {
   final ApiClient apiClient;
@@ -27,7 +22,7 @@ class _MainNavigationState extends State<MainNavigation> {
     final screens = [
       DocumentScreen(apiClient: widget.apiClient),
       TaskListScreen(apiClient: widget.apiClient), // Новый экран
-      SettingsScreen(),
+      SettingsScreen(apiClient: widget.apiClient),
     ];
 
     return Scaffold(
@@ -38,7 +33,7 @@ class _MainNavigationState extends State<MainNavigation> {
         items: const [
           BottomNavigationBarItem(
             icon: Icon(Icons.camera_alt),
-            label: 'Фотографировать',
+            label: 'Сделать фото',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.list_alt),
