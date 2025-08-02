@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'package:universal_platform/universal_platform.dart';
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:profit_league_documents/api/api_client.dart';
@@ -31,21 +32,25 @@ class _DocumentScreenState extends State<DocumentScreen> {
   }
 
   Future<void> _clearPhotoCache() async {
-    try {
-      final directory = await getApplicationDocumentsDirectory();
-      final photoDir = Directory('${directory.path}/photos');
-      if (await photoDir.exists()) {
-        await photoDir.delete(recursive: true);
-        debugPrint('Photo cache cleared: ${photoDir.path}');
-      } else {
-        debugPrint('Photo cache directory does not exist: ${photoDir.path}');
+    if (UniversalPlatform.isAndroid || UniversalPlatform.isIOS) {
+      try {
+        final directory = await getApplicationDocumentsDirectory();
+        final photoDir = Directory('${directory.path}/photos');
+        if (await photoDir.exists()) {
+          await photoDir.delete(recursive: true);
+          debugPrint('Photo cache cleared: ${photoDir.path}');
+        } else {
+          debugPrint('Photo cache directory does not exist: ${photoDir.path}');
+        }
+        await photoDir.create(recursive: true);
+      } catch (e) {
+        debugPrint('Error clearing photo cache: $e');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Ошибка при очистке кэша фотографий: $e')),
+        );
       }
-      await photoDir.create(recursive: true);
-    } catch (e) {
-      debugPrint('Error clearing photo cache: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Ошибка при очистке кэша фотографий: $e')),
-      );
+    } else {
+      // Web или другие платформы
     }
   }
 

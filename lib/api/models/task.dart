@@ -3,8 +3,10 @@ class Task {
   final String date;
   final String name;
   final String description;
-  final String getTime;
+  String getTime;
   final String author;
+  bool isNew;
+  final String id;
 
   Task({
     required this.date,
@@ -12,6 +14,8 @@ class Task {
     required this.description,
     required this.getTime,
     required this.author,
+    required this.isNew,
+    required this.id,
   });
 
   factory Task.fromJson(Map<String, dynamic> json) {
@@ -21,6 +25,8 @@ class Task {
       description: json['description'] ?? '',
       getTime: json['getTime'] ?? '',
       author: json['author'] ?? '',
+      isNew: json['isNew'] ?? false,
+      id: json['id'].toString(),
     );
   }
 }

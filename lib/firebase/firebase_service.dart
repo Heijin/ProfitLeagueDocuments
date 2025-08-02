@@ -2,12 +2,15 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import '../utils/device_utils.dart';
 import 'dart:developer';
 import 'dart:convert';
-
 import '../api/api_client.dart';
 import '../features/notifications/screens/push_details_screen.dart';
 import '../navigation_service.dart';
+import 'package:flutter/foundation.dart';
+import 'package:app_settings/app_settings.dart';
+import 'firebase_options.dart';
 
 final FlutterLocalNotificationsPlugin _flutterLocalNotificationsPlugin =
 FlutterLocalNotificationsPlugin();
@@ -17,30 +20,69 @@ Map<String, dynamic>? _initialPushData;
 
 class FirebaseService {
   static Future<void> initialize() async {
-    await Firebase.initializeApp();
+      await Firebase.initializeApp(
+        options: DefaultFirebaseOptions.currentPlatform,
+      );
+    // Проверка GMS только для Android
+    final hasGMS = await DeviceUtils.hasGMS();
+    if (!hasGMS && defaultTargetPlatform == TargetPlatform.android) {
+      log('🚫 Устройство Android без GMS — пропускаем инициализацию FCM');
+      return;
+    }
+
     FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
 
     final messaging = FirebaseMessaging.instance;
-    final settings =
-    await messaging.requestPermission(alert: true, badge: true, sound: true);
+    final settings = await messaging.requestPermission(alert: true, badge: true, sound: true);
     log('🔔 Статус разрешения на пуши: ${settings.authorizationStatus}');
+    if (settings.authorizationStatus == AuthorizationStatus.denied) {
+      showDialog(
+        context: navigatorKey.currentContext!,
+        builder: (context) => AlertDialog(
+          title: const Text('Уведомления отключены'),
+          content: const Text('Вы отключили уведомления. Вы можете включить их в настройках приложения.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Позже'),
+            ),
+            TextButton(
+              onPressed: () async {
+                Navigator.pop(context);
+                await AppSettings.openAppSettings(); // Открытие настроек
+              },
+              child: const Text('Открыть настройки'),
+            ),
+          ],
+        ),
+      );
+    }
 
     final token = await messaging.getToken();
     log('📱 FCM токен: $token');
 
     if (token != null) {
       await _safeRegisterToken(token);
-      // Подписка на топик "news"
-      try {
-        await messaging.subscribeToTopic("news");
-        log('✅ Подписка на топик "news" выполнена');
-      } catch (e) {
-        log('❌ Ошибка подписки на топик "news": $e');
+
+      if (!kIsWeb) {
+        try {
+          await messaging.subscribeToTopic("news");
+          log('✅ Подписка на топик "news" выполнена');
+        } catch (e) {
+          log('❌ Ошибка подписки на топик "news": $e');
+        }
+      } else {
+        log('ℹ️ Пропущена подписка на топик — Web-платформа не поддерживает');
       }
     }
 
+
     const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
-    const initSettings = InitializationSettings(android: androidSettings);
+    const iosSettings = DarwinInitializationSettings();
+    const initSettings = InitializationSettings(
+      android: androidSettings,
+      iOS: iosSettings,
+    );
 
     await _flutterLocalNotificationsPlugin.initialize(
       initSettings,
@@ -56,33 +98,33 @@ class FirebaseService {
       },
     );
 
-    // Регистрируем кастомный канал со звуком new_task.wav (должен лежать в android/app/src/main/res/raw)
-    const newTaskChannel = AndroidNotificationChannel(
-      'new_task_channel',
-      'Новые задачи',
-      description: 'Канал для новых задач с кастомным звуком',
-      importance: Importance.high,
-      sound: RawResourceAndroidNotificationSound('new_task'),
-    );
+    // Каналы только для Android
+    if (defaultTargetPlatform == TargetPlatform.android) {
+      const newTaskChannel = AndroidNotificationChannel(
+        'new_task_channel',
+        'Новые задачи',
+        description: 'Канал для новых задач с кастомным звуком',
+        importance: Importance.high,
+        sound: RawResourceAndroidNotificationSound('new_task'),
+      );
 
-    // Стандартный канал
-    const defaultChannel = AndroidNotificationChannel(
-      'default_channel',
-      'Обычные уведомления',
-      description: 'Канал по умолчанию',
-      importance: Importance.high,
-    );
+      const defaultChannel = AndroidNotificationChannel(
+        'default_channel',
+        'Обычные уведомления',
+        description: 'Канал по умолчанию',
+        importance: Importance.high,
+      );
 
-    final androidPlugin =
-    _flutterLocalNotificationsPlugin.resolvePlatformSpecificImplementation<
-        AndroidFlutterLocalNotificationsPlugin>();
+      final androidPlugin = _flutterLocalNotificationsPlugin
+          .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
 
-    await androidPlugin?.createNotificationChannel(newTaskChannel);
-    await androidPlugin?.createNotificationChannel(defaultChannel);
+      await androidPlugin?.createNotificationChannel(newTaskChannel);
+      await androidPlugin?.createNotificationChannel(defaultChannel);
+    }
 
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
       final notification = message.notification;
-      final type = message.data['type']; // тип уведомления (например, 'new_task')
+      final type = message.data['type'];
 
       final data = {
         'title': notification?.title,
@@ -91,8 +133,8 @@ class FirebaseService {
       };
 
       if (notification != null) {
-        // Выбор канала и звука
         final isNewTask = type == 'new_task';
+
         final androidDetails = AndroidNotificationDetails(
           isNewTask ? 'new_task_channel' : 'default_channel',
           isNewTask ? 'Новые задачи' : 'Обычные уведомления',
@@ -104,7 +146,17 @@ class FirebaseService {
           icon: '@mipmap/ic_launcher',
         );
 
-        final notificationDetails = NotificationDetails(android: androidDetails);
+        final iosDetails = DarwinNotificationDetails(
+          presentAlert: true,
+          presentBadge: true,
+          presentSound: true,
+          sound: isNewTask ? 'new_task.wav' : null,
+        );
+
+        final notificationDetails = NotificationDetails(
+          android: androidDetails,
+          iOS: iosDetails,
+        );
 
         _flutterLocalNotificationsPlugin.show(
           notification.hashCode,

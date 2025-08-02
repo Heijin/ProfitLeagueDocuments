@@ -2,6 +2,8 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:crypto/crypto.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+//import 'dart:io';
+import 'package:universal_platform/universal_platform.dart';
 import 'package:profit_league_documents/api/api_client.dart';
 import 'package:profit_league_documents/features/auth/screens/registration_screen.dart';
 import 'package:profit_league_documents/shared/auth_storage.dart';
@@ -10,6 +12,7 @@ import 'package:profit_league_documents/firebase/firebase_service.dart';
 import 'package:profit_league_documents/features/notifications/screens/push_details_screen.dart';
 import 'package:profit_league_documents/navigation_service.dart';
 import 'package:profit_league_documents/main_navigation.dart';
+import 'package:profit_league_documents/utils/device_utils.dart';
 
 class AuthorizationScreen extends StatefulWidget {
   final ApiClient apiClient;
@@ -60,7 +63,9 @@ class _AuthorizationScreenState extends State<AuthorizationScreen> {
     try {
       final response = await widget.apiClient.authorize(email, passwordHash);
       final expiresIn = response['expires_in'] as int;
-      final accessTokenExpiresAt = DateTime.now().add(Duration(seconds: expiresIn));
+      final accessTokenExpiresAt = DateTime.now().add(
+        Duration(seconds: expiresIn),
+      );
 
       await AuthStorage().saveTokens(
         email: email,
@@ -71,9 +76,22 @@ class _AuthorizationScreenState extends State<AuthorizationScreen> {
       );
 
       // 🔐 Отправка FCM токена
-      final fcmToken = await FirebaseMessaging.instance.getToken();
-      if (fcmToken != null) {
-        await widget.apiClient.registerPushToken(fcmToken);
+      bool hasPushSupport = false;
+
+      if (UniversalPlatform.isAndroid) {
+        hasPushSupport = await DeviceUtils.hasGMS();
+      } else if (UniversalPlatform.isIOS) {
+        hasPushSupport = true;
+      } else {
+        // Web или другие платформы
+        hasPushSupport = false;
+      }
+
+      if (hasPushSupport) {
+        final fcmToken = await FirebaseMessaging.instance.getToken();
+        if (fcmToken != null) {
+          await widget.apiClient.registerPushToken(fcmToken);
+        }
       }
 
       if (mounted) {
@@ -87,14 +105,14 @@ class _AuthorizationScreenState extends State<AuthorizationScreen> {
       }
 
       // ✅ После перехода на DocumentScreen — проверим initial push
-      final pushData = FirebaseService.consumeInitialPushData();
-      if (pushData != null) {
-        // используем глобальный navigatorKey
-        navigatorKey.currentState?.push(
-          MaterialPageRoute(
-            builder: (_) => PushDetailsScreen(data: pushData),
-          ),
-        );
+      if (hasPushSupport) {
+        final pushData = FirebaseService.consumeInitialPushData();
+        if (pushData != null) {
+          // используем глобальный navigatorKey
+          navigatorKey.currentState?.push(
+            MaterialPageRoute(builder: (_) => PushDetailsScreen(data: pushData)),
+          );
+        }
       }
 
     } on ApiException catch (e) {
@@ -161,7 +179,8 @@ class _AuthorizationScreenState extends State<AuthorizationScreen> {
                       decoration: const InputDecoration(labelText: 'Почта'),
                       keyboardType: TextInputType.emailAddress,
                       validator: (value) {
-                        if (value == null || !RegExp(r'^\S+@\S+\.\S+$').hasMatch(value)) {
+                        if (value == null ||
+                            !RegExp(r'^\S+@\S+\.\S+$').hasMatch(value)) {
                           return 'Введите корректный email';
                         }
                         return null;
@@ -184,18 +203,18 @@ class _AuthorizationScreenState extends State<AuthorizationScreen> {
                     _isLoading
                         ? const CircularProgressIndicator()
                         : Column(
-                      children: [
-                        ElevatedButton(
-                          onPressed: _login,
-                          child: const Text('Войти'),
-                        ),
-                        const SizedBox(height: 12),
-                        TextButton(
-                          onPressed: _navigateToRegistration,
-                          child: const Text('Зарегистрироваться'),
-                        ),
-                      ],
-                    ),
+                            children: [
+                              ElevatedButton(
+                                onPressed: _login,
+                                child: const Text('Войти'),
+                              ),
+                              const SizedBox(height: 12),
+                              TextButton(
+                                onPressed: _navigateToRegistration,
+                                child: const Text('Зарегистрироваться'),
+                              ),
+                            ],
+                          ),
                   ],
                 ),
               ),

@@ -1,4 +1,7 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:device_info_plus/device_info_plus.dart';
 import 'package:profit_league_documents/api/api_client.dart';
 import 'package:profit_league_documents/features/auth/screens/authorization_screen.dart';
 import 'package:profit_league_documents/features/notifications/screens/push_details_screen.dart';
@@ -9,8 +12,21 @@ import 'package:profit_league_documents/main_navigation.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await FirebaseService.initialize(); // навигатор уже доступен через navigation_service.dart
+  await FirebaseService.initialize();
+  await _requestNotificationPermissionIfNeeded();
   runApp(MyApp());
+}
+
+Future<void> _requestNotificationPermissionIfNeeded() async {
+  if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+    final androidInfo = await DeviceInfoPlugin().androidInfo;
+    if (androidInfo.version.sdkInt >= 33) {
+      final status = await Permission.notification.status;
+      if (!status.isGranted) {
+        await Permission.notification.request();
+      }
+    }
+  }
 }
 
 class MyApp extends StatelessWidget {
@@ -40,13 +56,11 @@ class MyApp extends StatelessWidget {
           foregroundColor: Colors.white,
           elevation: 0,
         ),
-
         textButtonTheme: TextButtonThemeData(
           style: TextButton.styleFrom(
-            foregroundColor: Colors.red, // цвет текста и ripple
+            foregroundColor: Colors.red,
           ),
         ),
-
       ),
       home: StartScreen(apiClient: _apiClient),
       debugShowCheckedModeBanner: false,
@@ -86,12 +100,10 @@ class _StartScreenState extends State<StartScreen> {
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(
-              //builder: (_) => DocumentScreen(apiClient: widget.apiClient),
               builder: (_) => MainNavigation(apiClient: widget.apiClient),
             ),
           );
 
-          // ✅ Обработка пуша после авторизации по токену
           final pushData = FirebaseService.consumeInitialPushData();
           if (pushData != null) {
             WidgetsBinding.instance.addPostFrameCallback((_) {
