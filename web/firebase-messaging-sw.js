@@ -19,7 +19,7 @@ messaging.onBackgroundMessage(function(payload) {
   const notificationTitle = payload.notification?.title || 'Уведомление';
   const notificationOptions = {
     body: payload.notification?.body || '',
-    icon: payload.notification?.icon || 'https://exchange.pr-lg.ru/ProfitLeagueDocuments/icons/Icon-192.png',
+    icon: payload.notification?.icon || 'https://exchange.pr-lg.ru/Icons/Icon-192.png',
     data: {
       click_action: payload.notification?.click_action || 'https://exchange.pr-lg.ru/ProfitLeagueDocuments'
     }
