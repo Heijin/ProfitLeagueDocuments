@@ -1,105 +1,46 @@
+import 'dart:convert';
+import 'dart:developer';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import '../utils/device_utils.dart';
-import 'dart:developer';
-import 'dart:convert';
-import '../api/api_client.dart';
-import '../features/notifications/screens/push_details_screen.dart';
-import '../navigation_service.dart';
-import 'package:flutter/foundation.dart';
+import 'package:profit_league_documents/api/api_client.dart';
+import 'package:profit_league_documents/navigation_service.dart';
+import 'package:profit_league_documents/features/notifications/screens/push_details_screen.dart';
+import 'package:profit_league_documents/shared/auth_storage.dart';
 import 'package:app_settings/app_settings.dart';
-import 'firebase_options.dart';
-
-final FlutterLocalNotificationsPlugin _flutterLocalNotificationsPlugin =
-FlutterLocalNotificationsPlugin();
-final ApiClient _apiClient = ApiClient();
-
-Map<String, dynamic>? _initialPushData;
+import 'package:profit_league_documents/firebase/firebase_options.dart';
 
 class FirebaseService {
+  static final FirebaseMessaging messaging = FirebaseMessaging.instance;
+  static final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
+  FlutterLocalNotificationsPlugin();
+  static RemoteMessage? _initialMessage;
+
   static Future<void> initialize() async {
-      await Firebase.initializeApp(
-        options: DefaultFirebaseOptions.currentPlatform,
-      );
-    // Проверка GMS только для Android
-    final hasGMS = await DeviceUtils.hasGMS();
-    if (!hasGMS && defaultTargetPlatform == TargetPlatform.android) {
-      log('🚫 Устройство Android без GMS — пропускаем инициализацию FCM');
-      return;
-    }
-
-    FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
-
-    final messaging = FirebaseMessaging.instance;
-    final settings = await messaging.requestPermission(alert: true, badge: true, sound: true);
-    log('🔔 Статус разрешения на пуши: ${settings.authorizationStatus}');
-    if (settings.authorizationStatus == AuthorizationStatus.denied) {
-      showDialog(
-        context: navigatorKey.currentContext!,
-        builder: (context) => AlertDialog(
-          title: const Text('Уведомления отключены'),
-          content: const Text('Вы отключили уведомления. Вы можете включить их в настройках приложения.'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Позже'),
-            ),
-            TextButton(
-              onPressed: () async {
-                Navigator.pop(context);
-                await AppSettings.openAppSettings(); // Открытие настроек
-              },
-              child: const Text('Открыть настройки'),
-            ),
-          ],
-        ),
-      );
-    }
-
-    final token = await messaging.getToken();
-    log('📱 FCM токен: $token');
-
-    if (token != null) {
-      await _safeRegisterToken(token);
-
-      if (!kIsWeb) {
-        try {
-          await messaging.subscribeToTopic("news");
-          log('✅ Подписка на топик "news" выполнена');
-        } catch (e) {
-          log('❌ Ошибка подписки на топик "news": $e');
-        }
-      } else {
-        log('ℹ️ Пропущена подписка на топик — Web-платформа не поддерживает');
-      }
-    }
-
-
-    const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
-    const iosSettings = DarwinInitializationSettings();
-    const initSettings = InitializationSettings(
-      android: androidSettings,
-      iOS: iosSettings,
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
     );
 
-    await _flutterLocalNotificationsPlugin.initialize(
-      initSettings,
+    const AndroidInitializationSettings initializationSettingsAndroid =
+    AndroidInitializationSettings('@mipmap/ic_launcher');
+
+    const InitializationSettings initializationSettings = InitializationSettings(
+      android: initializationSettingsAndroid,
+    );
+
+    await flutterLocalNotificationsPlugin.initialize(
+      initializationSettings,
       onDidReceiveNotificationResponse: (details) {
         if (details.payload != null) {
-          try {
-            final data = jsonDecode(details.payload!);
-            _openPushScreen(data);
-          } catch (e) {
-            log('❌ Ошибка при парсинге payload: $e');
-          }
+          _handleMessage(jsonDecode(details.payload!));
         }
       },
     );
 
-    // Каналы только для Android
-    if (defaultTargetPlatform == TargetPlatform.android) {
+    // ✅ Создание кастомных Android каналов
+    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
       const newTaskChannel = AndroidNotificationChannel(
         'new_task_channel',
         'Новые задачи',
@@ -115,26 +56,120 @@ class FirebaseService {
         importance: Importance.high,
       );
 
-      final androidPlugin = _flutterLocalNotificationsPlugin
-          .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+      final androidPlugin =
+      flutterLocalNotificationsPlugin.resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin>();
 
       await androidPlugin?.createNotificationChannel(newTaskChannel);
       await androidPlugin?.createNotificationChannel(defaultChannel);
     }
 
+    if (kIsWeb) {
+      final fcmToken = await AuthStorage().getFcmToken();
+      // fcmToken можно позже отправить при авторизации
+    } else {
+      await _requestPermission();
+      await _getToken();
+    }
+
+    _setupForegroundMessageHandler();
+    _setupBackgroundMessageHandler();
+
+    _initialMessage = await messaging.getInitialMessage();
+  }
+
+  static Future<bool> requestPermissionWeb() async {
+    if (!kIsWeb) return true;
+    final settings = await messaging.requestPermission(
+      alert: true,
+      badge: true,
+      sound: true,
+    );
+    log('🔔 [WEB] Статус разрешения на пуши: ${settings.authorizationStatus}');
+    return settings.authorizationStatus == AuthorizationStatus.authorized ||
+        settings.authorizationStatus == AuthorizationStatus.provisional;
+  }
+
+  static Future<void> _requestPermission() async {
+    final settings = await messaging.requestPermission(
+      alert: true,
+      badge: true,
+      sound: true,
+    );
+
+    log('🔔 Статус разрешения на пуши: ${settings.authorizationStatus}');
+
+    if (!kIsWeb && settings.authorizationStatus == AuthorizationStatus.denied) {
+      final context = navigatorKey.currentContext;
+      if (context != null) {
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Уведомления отключены'),
+            content: const Text(
+              'Вы отключили уведомления. Вы можете включить их в настройках приложения.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Позже'),
+              ),
+              TextButton(
+                onPressed: () async {
+                  Navigator.pop(context);
+                  await AppSettings.openAppSettings();
+                },
+                child: const Text('Открыть настройки'),
+              ),
+            ],
+          ),
+        );
+      } else {
+        log('⚠️ Контекст недоступен для отображения диалога.');
+      }
+    }
+  }
+
+  static Future<void> _getToken() async {
+    final token = await messaging.getToken();
+    log('📱 FCM токен: $token');
+    final accessToken = await AuthStorage().getAccessToken();
+    if (token != null && accessToken != null) {
+      try {
+        await ApiClient().post(
+          '/registerPushToken',
+          body: {'pushToken': token},
+          headers: {'Authorization': 'Bearer $accessToken'},
+        );
+        log('✅ FCM токен отправлен на сервер');
+      } catch (e) {
+        log('❌ Ошибка при отправке FCM токена: $e');
+      }
+    }
+  }
+
+  static Future<String?> getTokenWeb() async {
+    if (!kIsWeb) return null;
+    try {
+      final token = await messaging.getToken();
+      log('📱 [WEB] FCM токен: $token');
+      return token;
+    } catch (e) {
+      log('❌ Ошибка получения FCM токена для Web: $e');
+      return null;
+    }
+  }
+
+  static void _setupForegroundMessageHandler() {
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+      log('📩 Получено push-сообщение (foreground): ${message.data}');
+
       final notification = message.notification;
+      final android = notification?.android;
       final type = message.data['type'];
+      final isNewTask = type == 'new_task';
 
-      final data = {
-        'title': notification?.title,
-        'body': notification?.body,
-        ...message.data,
-      };
-
-      if (notification != null) {
-        final isNewTask = type == 'new_task';
-
+      if (notification != null && android != null) {
         final androidDetails = AndroidNotificationDetails(
           isNewTask ? 'new_task_channel' : 'default_channel',
           isNewTask ? 'Новые задачи' : 'Обычные уведомления',
@@ -146,75 +181,56 @@ class FirebaseService {
           icon: '@mipmap/ic_launcher',
         );
 
-        final iosDetails = DarwinNotificationDetails(
+        const iosDetails = DarwinNotificationDetails(
           presentAlert: true,
           presentBadge: true,
           presentSound: true,
-          sound: isNewTask ? 'new_task.wav' : null,
         );
 
-        final notificationDetails = NotificationDetails(
+        final details = NotificationDetails(
           android: androidDetails,
           iOS: iosDetails,
         );
 
-        _flutterLocalNotificationsPlugin.show(
+        flutterLocalNotificationsPlugin.show(
           notification.hashCode,
           notification.title,
           notification.body,
-          notificationDetails,
-          payload: jsonEncode(data),
+          details,
+          payload: jsonEncode(message.data),
         );
       }
     });
+  }
 
+  static void _setupBackgroundMessageHandler() {
     FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
-      _openPushScreen({
-        'title': message.notification?.title,
-        'body': message.notification?.body,
-        ...message.data,
-      });
+      log('📩 Push-сообщение открыло приложение (background): ${message.data}');
+      _handleMessage(message.data);
     });
+  }
 
-    final initialMessage = await messaging.getInitialMessage();
-    if (initialMessage != null) {
-      _initialPushData = {
-        'title': initialMessage.notification?.title,
-        'body': initialMessage.notification?.body,
-        ...initialMessage.data,
-      };
-      log('🚀 Запуск из terminated push');
+  static void _handleMessage(Map<String, dynamic> data) {
+    final context = navigatorKey.currentContext;
+    if (context != null) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => PushDetailsScreen(data: data),
+        ),
+      );
+    } else {
+      log('⚠️ Контекст недоступен при открытии пуша');
     }
   }
 
   static Map<String, dynamic>? consumeInitialPushData() {
-    final data = _initialPushData;
-    _initialPushData = null;
-    return data;
-  }
-
-  static void _openPushScreen(Map<String, dynamic> data) {
-    final context = navigatorKey.currentContext;
-    if (context != null) {
-      navigatorKey.currentState?.push(
-        MaterialPageRoute(builder: (_) => PushDetailsScreen(data: data)),
-      );
-    } else {
-      log('⚠️ navigatorKey недоступен — не удалось открыть экран');
+    if (_initialMessage != null) {
+      log('📩 Push-сообщение открыло приложение (terminated): ${_initialMessage!.data}');
+      final data = _initialMessage!.data;
+      _initialMessage = null;
+      return data;
     }
-  }
-
-  static Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-    await Firebase.initializeApp();
-    log('🕹️ Фоновое уведомление: ${message.notification?.title}');
-  }
-
-  static Future<void> _safeRegisterToken(String token) async {
-    try {
-      await _apiClient.registerPushToken(token);
-      log('✅ FCM токен отправлен на сервер');
-    } catch (e) {
-      log('❌ Ошибка отправки токена: $e');
-    }
+    return null;
   }
 }

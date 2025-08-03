@@ -9,6 +9,8 @@ class AuthStorage {
   static const _kAccessTokenExpiresIn = 'access_token_expires_in';
   static const _kTokenType = 'token_type';
   static const _kDocuments = 'documents';
+  // Новый ключ для FCM токена
+  static const _kFcmToken = 'fcm_token';
 
   Future<void> saveTokens({
     required String email,
@@ -67,5 +69,17 @@ class AuthStorage {
 
   Future<void> saveEmail(String email) async {
     await _storage.write(key: _kEmail, value: email);
+  }
+
+  Future<void> saveFcmToken(String token) async {
+    await _storage.write(key: _kFcmToken, value: token);
+  }
+
+  Future<String?> getFcmToken() async {
+    return await _storage.read(key: _kFcmToken);
+  }
+
+  Future<void> clearFcmToken() async {
+    await _storage.delete(key: _kFcmToken);
   }
 }

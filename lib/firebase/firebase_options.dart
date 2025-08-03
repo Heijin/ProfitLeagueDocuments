@@ -23,7 +23,7 @@ class DefaultFirebaseOptions {
           apiKey: 'AIzaSyA6KN7oOfV8xMyiQnoiA9xEHxwakjfazlo',
           appId: '1:555319309212:android:3bfda62bf85ae11c578e59',
           messagingSenderId: '555319309212',
-          projectId: '555319309212',
+          projectId: 'profit-league-documents',
           storageBucket: 'profit-league-documents.firebasestorage.app',
         );
       case TargetPlatform.iOS:

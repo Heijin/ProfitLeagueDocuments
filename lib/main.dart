@@ -13,12 +13,16 @@ import 'package:profit_league_documents/main_navigation.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await FirebaseService.initialize();
-  await _requestNotificationPermissionIfNeeded();
+
+  if (!kIsWeb) {
+    await _requestNotificationPermissionIfNeeded();
+  }
+
   runApp(MyApp());
 }
 
 Future<void> _requestNotificationPermissionIfNeeded() async {
-  if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+  if (defaultTargetPlatform == TargetPlatform.android) {
     final androidInfo = await DeviceInfoPlugin().androidInfo;
     if (androidInfo.version.sdkInt >= 33) {
       final status = await Permission.notification.status;
@@ -104,16 +108,8 @@ class _StartScreenState extends State<StartScreen> {
             ),
           );
 
-          final pushData = FirebaseService.consumeInitialPushData();
-          if (pushData != null) {
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              navigatorKey.currentState?.push(
-                MaterialPageRoute(
-                  builder: (_) => PushDetailsScreen(data: pushData),
-                ),
-              );
-            });
-          }
+          // Просто вызываем метод, не сохраняем его результат
+          //FirebaseService.consumeInitialPushData();
 
           return;
         }
