@@ -4,12 +4,12 @@ import 'models/photo.dart';
 import 'package:profit_league_documents/shared/auth_storage.dart';
 
 class ApiClient {
-  static const String _baseHost = 'exchange.pr-lg.ru';
-  //static const String _baseHost = 'neptune.pr-lg.ru:81';
+  //static const String _baseHost = 'exchange.pr-lg.ru';
+  static const String _baseHost = 'neptune.pr-lg.ru:81';
   //static const String _baseHost = '10.0.17.18:81';
-  static const String _basePath = '/trade11-photoSave/hs/PhotoSave';
-  //static const String _basePath = '/trade115-tkach-photoSave/hs/PhotoSave';
-  static const bool _useHttps = true;
+  //static const String _basePath = '/trade11-photoSave/hs/PhotoSave';
+  static const String _basePath = '/trade115-tkach-photoSave/hs/PhotoSave';
+  static const bool _useHttps = false;
 
   final http.Client _http = http.Client();
   final AuthStorage _storage = AuthStorage();

@@ -14,65 +14,40 @@ class TaskListScreen extends StatefulWidget {
 
 class _TaskListScreenState extends State<TaskListScreen> {
   List<Task> tasks = [];
-  bool isLoading = false;
+  bool isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    _fetchTasks();
+    _loadTasks();
   }
 
-  Future<void> _fetchTasks() async {
-    setState(() => isLoading = true);
+  Future<void> _loadTasks() async {
     try {
       final response = await widget.apiClient.get('/taskList');
-      final List<dynamic> data = jsonDecode(response.body);
+      final List<dynamic> data = json.decode(response.body);
       setState(() {
         tasks = data.map((e) => Task.fromJson(e)).toList();
+        isLoading = false;
       });
     } catch (e) {
+      setState(() {
+        isLoading = false;
+      });
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Ошибка загрузки заданий: $e')),
+        SnackBar(content: Text('Ошибка загрузки: $e')),
       );
-    } finally {
-      setState(() => isLoading = false);
     }
   }
 
-  Future<void> _takeOnTask(Task task) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Подтверждение'),
-        content: const Text('Вы точно берете в работу?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Нет'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text(
-              'Да',
-              style: TextStyle(color: Colors.green),
-            ),
-          ),
-        ],
-      ),
-    );
-
-    if (confirmed != true) return;
-
+  Future<void> _takeTask(Task task) async {
     try {
-      final response = await widget.apiClient.get('/takeOnTask?id=${task.id}');
+      final response = await widget.apiClient.get('/task?id=${task.id}');
       if (response.statusCode == 200) {
-        setState(() {
-          task.isNew = false;
-          task.getTime = DateFormat.Hm().format(DateTime.now());
-        });
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Задание взято в работу')),
         );
+        _loadTasks();
       } else {
         final decoded = json.decode(response.body);
         final message = decoded['message'] ?? 'Неизвестная ошибка';
@@ -87,103 +62,112 @@ class _TaskListScreenState extends State<TaskListScreen> {
     }
   }
 
+  Future<void> _completeTask(Task task) async {
+    final List<String> comments =
+    List.generate(15, (i) => 'Комментарий ${i + 1}');
+
+    final selectedComment = await showDialog<String>(
+      context: context,
+      builder: (context) => SimpleDialog(
+        title: const Text('Выберите комментарий'),
+        children: comments
+            .map((comment) => SimpleDialogOption(
+          child: Text(comment),
+          onPressed: () => Navigator.pop(context, comment),
+        ))
+            .toList(),
+      ),
+    );
+
+    if (selectedComment == null) return;
+
+    try {
+      final response = await widget.apiClient.post(
+        '/task?id=${task.id}',
+        body: {'comment': selectedComment},
+      );
+
+      if (response.statusCode == 200) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Задание успешно завершено')),
+        );
+        _loadTasks();
+      } else {
+        final decoded = json.decode(response.body);
+        final message = decoded['message'] ?? 'Неизвестная ошибка';
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Ошибка завершения: $message')),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Ошибка: $e')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Активные задания')),
-      body: RefreshIndicator(
-        onRefresh: _fetchTasks,
-        child: isLoading
-            ? const Center(child: CircularProgressIndicator())
-            : tasks.isEmpty
-            ? const Center(child: Text('Нет активных заданий'))
-            : ListView.builder(
-          itemCount: tasks.length,
-            itemBuilder: (context, index) {
-              final task = tasks[index];
-              return Card(
-                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                elevation: 0,
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Icon(Icons.assignment, color: Colors.blue[700], size: 32),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Text(
-                              task.name,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 18,
-                              ),
-                            ),
-                          ),
-                        ],
+      appBar: AppBar(
+        title: const Text('Список заданий'),
+      ),
+      body: isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : ListView.builder(
+        padding: const EdgeInsets.all(12),
+        itemCount: tasks.length,
+        itemBuilder: (context, index) {
+          final task = tasks[index];
+          final dateFormatted = DateFormat('dd.MM.yyyy HH:mm')
+              .format(DateTime.tryParse(task.date) ?? DateTime.now());
+
+          return Card(
+            elevation: 2,
+            margin: const EdgeInsets.symmetric(vertical: 8),
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Дата: $dateFormatted',
+                      style: const TextStyle(fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 8),
+                  Text('Название: ${task.name}'),
+                  const SizedBox(height: 4),
+                  Text('Описание: ${task.description}'),
+                  const SizedBox(height: 4),
+                  Text('Время: ${task.getTime}'),
+                  const SizedBox(height: 4),
+                  Text('Автор: ${task.author}'),
+                  const SizedBox(height: 12),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        if (task.isNew) {
+                          _takeTask(task);
+                        } else {
+                          _completeTask(task);
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor:
+                        task.isNew ? Colors.green : Colors.red,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 8),
                       ),
-                      const SizedBox(height: 8),
-                      Text(
-                        task.description,
-                        style: const TextStyle(fontSize: 15, color: Colors.black87),
-                      ),
-                      const SizedBox(height: 12),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Icon(Icons.calendar_today,
-                                  size: 16, color: Colors.grey[600]),
-                              const SizedBox(width: 4),
-                              Text(task.date, style: const TextStyle(color: Colors.grey)),
-                              const SizedBox(width: 16),
-                              Icon(Icons.access_time,
-                                  size: 16, color: Colors.grey[600]),
-                              const SizedBox(width: 4),
-                              Text(task.getTime, style: const TextStyle(color: Colors.grey)),
-                            ],
-                          ),
-                          const SizedBox(height: 4),
-                          Row(
-                            children: [
-                              Icon(Icons.person, size: 16, color: Colors.grey[600]),
-                              const SizedBox(width: 4),
-                              Expanded(
-                                child: Text(
-                                  task.author,
-                                  style: const TextStyle(color: Colors.grey),
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                      if (task.isNew) ...[
-                        const SizedBox(height: 12),
-                        Align(
-                          alignment: Alignment.centerRight,
-                          child: ElevatedButton(
-                            onPressed: () => _takeOnTask(task),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.green,
-                              foregroundColor: Colors.white,
-                              padding:
-                              const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                            ),
-                            child: const Text('Взять в работу'),
-                          ),
-                        ),
-                      ],
-                    ],
+                      child: Text(task.isNew
+                          ? 'Взять в работу'
+                          : 'Завершить задание'),
+                    ),
                   ),
-                ),
-              );
-            },
-        ),
+                ],
+              ),
+            ),
+          );
+        },
       ),
     );
   }
