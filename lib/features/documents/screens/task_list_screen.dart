@@ -66,14 +66,13 @@ class _TaskListScreenState extends State<TaskListScreen> {
 
   Future<void> _completeTask(Task task) async {
     try {
-      // Загружаем только один раз
       if (commentsCache == null) {
         final commentsResp = await widget.apiClient.get('/comments');
         final List<dynamic> commentsJson = json.decode(commentsResp.body);
         commentsCache = commentsJson
             .map<Map<String, dynamic>>(
               (e) => {'id': e['id'], 'name': e['name']},
-            )
+        )
             .toList();
       }
 
@@ -84,10 +83,10 @@ class _TaskListScreenState extends State<TaskListScreen> {
           children: commentsCache!
               .map(
                 (comment) => SimpleDialogOption(
-                  child: Text(comment['name']),
-                  onPressed: () => Navigator.pop(context, comment),
-                ),
-              )
+              child: Text(comment['name']),
+              onPressed: () => Navigator.pop(context, comment),
+            ),
+          )
               .toList(),
         ),
       );
@@ -128,12 +127,34 @@ class _TaskListScreenState extends State<TaskListScreen> {
           ? const Center(child: CircularProgressIndicator())
           : RefreshIndicator(
         onRefresh: _loadTasks,
-        child: ListView.builder(
+        child: tasks.isEmpty
+            ? ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          children: [
+            const SizedBox(height: 100),
+            Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.assignment_turned_in, size: 64, color: Colors.grey[400],
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'Заданий нет',
+                  style: TextStyle(color: Colors.grey,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        )
+            : ListView.builder(
           padding: const EdgeInsets.all(12),
           itemCount: tasks.length,
           itemBuilder: (context, index) {
             final task = tasks[index];
-            final isCompleted = completedTaskIds.contains(task.id);
+            final isCompleted =
+            completedTaskIds.contains(task.id);
 
             return Card(
               elevation: 0,
@@ -177,7 +198,9 @@ class _TaskListScreenState extends State<TaskListScreen> {
                           color: Colors.orange,
                         ),
                         const SizedBox(width: 8),
-                        Expanded(child: Text('Название: ${task.name}')),
+                        Expanded(
+                          child: Text('Название: ${task.name}'),
+                        ),
                       ],
                     ),
                     const SizedBox(height: 4),
@@ -190,7 +213,8 @@ class _TaskListScreenState extends State<TaskListScreen> {
                         ),
                         const SizedBox(width: 8),
                         Expanded(
-                          child: Text('Описание: ${task.description}'),
+                          child:
+                          Text('Описание: ${task.description}'),
                         ),
                       ],
                     ),
@@ -208,7 +232,8 @@ class _TaskListScreenState extends State<TaskListScreen> {
                     ),
                     const SizedBox(height: 4),
                     Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      mainAxisAlignment:
+                      MainAxisAlignment.spaceBetween,
                       children: [
                         Row(
                           children: [
@@ -253,14 +278,12 @@ class _TaskListScreenState extends State<TaskListScreen> {
                             _completeTask(task);
                           }
                         },
-                        icon: Icon(
-                          task.isNew ? Icons.play_arrow : Icons.check,
-                        ),
-                        label: Text(
-                          task.isNew
-                              ? 'Взять в работу'
-                              : 'Завершить задание',
-                        ),
+                        icon: Icon(task.isNew
+                            ? Icons.play_arrow
+                            : Icons.check),
+                        label: Text(task.isNew
+                            ? 'Взять в работу'
+                            : 'Завершить задание'),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: task.isNew
                               ? Colors.green
@@ -271,7 +294,8 @@ class _TaskListScreenState extends State<TaskListScreen> {
                             vertical: 12,
                           ),
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius:
+                            BorderRadius.circular(12),
                           ),
                         ),
                       ),
@@ -285,5 +309,4 @@ class _TaskListScreenState extends State<TaskListScreen> {
       ),
     );
   }
-
 }
