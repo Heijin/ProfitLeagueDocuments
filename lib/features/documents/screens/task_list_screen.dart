@@ -123,27 +123,63 @@ class _TaskListScreenState extends State<TaskListScreen> {
               .format(DateTime.tryParse(task.date) ?? DateTime.now());
 
           return Card(
-            elevation: 2,
-            margin: const EdgeInsets.symmetric(vertical: 8),
+            elevation: 4,
+            margin: const EdgeInsets.symmetric(vertical: 10),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+              side: BorderSide(
+                color: task.isNew ? Colors.green.shade300 : Colors.red.shade300,
+                width: 1.5,
+              ),
+            ),
             child: Padding(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.all(16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Дата: $dateFormatted',
-                      style: const TextStyle(fontWeight: FontWeight.bold)),
+                  Row(
+                    children: [
+                      const Icon(Icons.calendar_today, size: 20, color: Colors.blueGrey),
+                      const SizedBox(width: 8),
+                      Text('Дата: $dateFormatted', style: const TextStyle(fontWeight: FontWeight.bold)),
+                    ],
+                  ),
                   const SizedBox(height: 8),
-                  Text('Название: ${task.name}'),
+                  Row(
+                    children: [
+                      const Icon(Icons.title, size: 20, color: Colors.orange),
+                      const SizedBox(width: 8),
+                      Expanded(child: Text('Название: ${task.name}')),
+                    ],
+                  ),
                   const SizedBox(height: 4),
-                  Text('Описание: ${task.description}'),
+                  Row(
+                    children: [
+                      const Icon(Icons.description, size: 20, color: Colors.teal),
+                      const SizedBox(width: 8),
+                      Expanded(child: Text('Описание: ${task.description}')),
+                    ],
+                  ),
                   const SizedBox(height: 4),
-                  Text('Время: ${task.getTime}'),
+                  Row(
+                    children: [
+                      const Icon(Icons.timer_outlined, size: 20, color: Colors.deepPurple),
+                      const SizedBox(width: 8),
+                      Text('Время: ${task.getTime}'),
+                    ],
+                  ),
                   const SizedBox(height: 4),
-                  Text('Автор: ${task.author}'),
-                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      const Icon(Icons.person, size: 20, color: Colors.indigo),
+                      const SizedBox(width: 8),
+                      Text('Автор: ${task.author}'),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
                   Align(
                     alignment: Alignment.centerRight,
-                    child: ElevatedButton(
+                    child: ElevatedButton.icon(
                       onPressed: () {
                         if (task.isNew) {
                           _takeTask(task);
@@ -151,16 +187,18 @@ class _TaskListScreenState extends State<TaskListScreen> {
                           _completeTask(task);
                         }
                       },
+                      icon: Icon(task.isNew ? Icons.play_arrow : Icons.check),
+                      label: Text(task.isNew ? 'Взять в работу' : 'Завершить задание'),
                       style: ElevatedButton.styleFrom(
                         backgroundColor:
                         task.isNew ? Colors.green : Colors.red,
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 8),
+                            horizontal: 20, vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                       ),
-                      child: Text(task.isNew
-                          ? 'Взять в работу'
-                          : 'Завершить задание'),
                     ),
                   ),
                 ],
