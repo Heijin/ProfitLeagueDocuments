@@ -1,11 +1,19 @@
-import 'package:flutter/material.dart';
-import 'package:profit_league_documents/api/api_client.dart';
+import 'dart:async';
 import 'dart:convert';
 
+import 'package:flutter/material.dart';
+import 'package:profit_league_documents/api/api_client.dart';
+import 'package:profit_league_documents/main_navigation.dart'; // добавь этот импорт, если у тебя TaskListScreen в другом файле
+
 class PushDetailsScreen extends StatefulWidget {
+  final ApiClient apiClient;
   final Map<String, dynamic> data;
 
-  const PushDetailsScreen({super.key, required this.data});
+  PushDetailsScreen({
+    super.key,
+    ApiClient? apiClient,
+    required this.data,
+  }) : apiClient = apiClient ?? ApiClient(); // 👈 дефолтный клиент
 
   @override
   State<PushDetailsScreen> createState() => _PushDetailsScreenState();
@@ -15,8 +23,6 @@ class _PushDetailsScreenState extends State<PushDetailsScreen> {
   bool _isTakingTask = false;
   bool _taskTaken = false;
   String? _errorMessage;
-
-  final ApiClient _apiClient = ApiClient();
 
   Future<void> _takeOnTask(String id) async {
     final confirmed = await showDialog<bool>(
@@ -31,7 +37,8 @@ class _PushDetailsScreenState extends State<PushDetailsScreen> {
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Да',
+            child: const Text(
+              'Да',
               style: TextStyle(color: Colors.green),
             ),
           ),
@@ -47,11 +54,20 @@ class _PushDetailsScreenState extends State<PushDetailsScreen> {
     });
 
     try {
-      final response = await _apiClient.get('/takeOnTask?id=$id');
+      final response = await widget.apiClient.get('/takeOnTask?id=$id');
       final body = response.body;
       if (response.statusCode == 200) {
         setState(() {
           _taskTaken = true;
+        });
+
+        // Через 1 секунду переходим на TaskListScreen
+        Future.delayed(const Duration(seconds: 1), () {
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(
+              builder: (context) => MainNavigation(apiClient: widget.apiClient, initialTabIndex: 1), // индекс "Задания"
+            ),
+          );
         });
       } else {
         final decoded = json.decode(body);
@@ -94,7 +110,6 @@ class _PushDetailsScreenState extends State<PushDetailsScreen> {
             Text('🔹 Описание:', style: Theme.of(context).textTheme.titleMedium),
             Text(desc, style: Theme.of(context).textTheme.bodyMedium),
             const SizedBox(height: 20),
-
             if (isNewTask && taskId != null)
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,

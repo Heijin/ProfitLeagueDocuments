@@ -5,22 +5,32 @@ import 'package:profit_league_documents/features/documents/screens/document_scre
 import 'package:profit_league_documents/features/documents/screens/task_list_screen.dart';
 import 'package:profit_league_documents/features/settings/screens/settings_screen.dart';
 import 'package:profit_league_documents/firebase/firebase_service.dart';
-
 import 'features/notifications/screens/push_details_screen.dart';
 import 'navigation_service.dart';
 
-
 class MainNavigation extends StatefulWidget {
   final ApiClient apiClient;
-  const MainNavigation({super.key, required this.apiClient});
+  final int initialTabIndex;
+
+  const MainNavigation({
+    super.key,
+    required this.apiClient,
+    this.initialTabIndex = 0,
+  });
 
   @override
   State<MainNavigation> createState() => _MainNavigationState();
 }
 
 class _MainNavigationState extends State<MainNavigation> {
-  int _currentIndex = 0;
+  late int _currentIndex;
   bool _initialPushHandled = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentIndex = widget.initialTabIndex;
+  }
 
   @override
   void didChangeDependencies() {
@@ -33,7 +43,7 @@ class _MainNavigationState extends State<MainNavigation> {
         WidgetsBinding.instance.addPostFrameCallback((_) {
           navigatorKey.currentState?.push(
             MaterialPageRoute(
-              builder: (_) => PushDetailsScreen(data: data),
+              builder: (_) => PushDetailsScreen(apiClient:widget.apiClient, data: data),
             ),
           );
         });
@@ -45,7 +55,7 @@ class _MainNavigationState extends State<MainNavigation> {
   Widget build(BuildContext context) {
     final screens = [
       DocumentScreen(apiClient: widget.apiClient),
-      TaskListScreen(apiClient: widget.apiClient), // Новый экран
+      TaskListScreen(apiClient: widget.apiClient),
       SettingsScreen(apiClient: widget.apiClient),
     ];
 

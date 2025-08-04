@@ -116,7 +116,7 @@ class _AuthorizationScreenState extends State<AuthorizationScreen> {
           WidgetsBinding.instance.addPostFrameCallback((_) {
             navigatorKey.currentState?.push(
               MaterialPageRoute(
-                builder: (_) => PushDetailsScreen(data: pushData),
+                builder: (_) => PushDetailsScreen(apiClient:widget.apiClient, data: pushData),
               ),
             );
           });

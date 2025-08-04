@@ -4,7 +4,6 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:profit_league_documents/api/api_client.dart';
 import 'package:profit_league_documents/features/auth/screens/authorization_screen.dart';
-import 'package:profit_league_documents/features/notifications/screens/push_details_screen.dart';
 import 'package:profit_league_documents/shared/auth_storage.dart';
 import 'package:profit_league_documents/firebase/firebase_service.dart';
 import 'package:profit_league_documents/navigation_service.dart';

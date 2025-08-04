@@ -126,161 +126,164 @@ class _TaskListScreenState extends State<TaskListScreen> {
       appBar: AppBar(title: const Text('Список заданий')),
       body: isLoading
           ? const Center(child: CircularProgressIndicator())
-          : ListView.builder(
-              padding: const EdgeInsets.all(12),
-              itemCount: tasks.length,
-              itemBuilder: (context, index) {
-                final task = tasks[index];
+          : RefreshIndicator(
+        onRefresh: _loadTasks,
+        child: ListView.builder(
+          padding: const EdgeInsets.all(12),
+          itemCount: tasks.length,
+          itemBuilder: (context, index) {
+            final task = tasks[index];
+            final isCompleted = completedTaskIds.contains(task.id);
 
-                final isCompleted = completedTaskIds.contains(task.id);
-
-                return Card(
-                  elevation: 4,
-                  margin: const EdgeInsets.symmetric(vertical: 10),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    side: BorderSide(
-                      color: task.isNew
-                          ? Colors.green.shade300
-                          : Colors.red.shade300,
-                      width: 1.5,
+            return Card(
+              elevation: 0,
+              margin: const EdgeInsets.symmetric(vertical: 10),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+                side: BorderSide(
+                  color: task.isNew
+                      ? Colors.green.shade300
+                      : Colors.red.shade300,
+                  width: 1.5,
+                ),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.calendar_today,
+                          size: 20,
+                          color: Colors.blueGrey,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Дата создания: ${task.date}',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.title,
+                          size: 20,
+                          color: Colors.orange,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(child: Text('Название: ${task.name}')),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.description,
+                          size: 20,
+                          color: Colors.teal,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text('Описание: ${task.description}'),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.timer_outlined,
+                          size: 20,
+                          color: Colors.deepPurple,
+                        ),
+                        const SizedBox(width: 8),
+                        Text('Время взятия: ${task.getTime}'),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Row(
                           children: [
                             const Icon(
-                              Icons.calendar_today,
+                              Icons.person,
                               size: 20,
-                              color: Colors.blueGrey,
+                              color: Colors.indigo,
                             ),
                             const SizedBox(width: 8),
-                            Text(
-                              'Дата создания: ${task.date}',
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
+                            Text('Автор: ${task.author}'),
                           ],
                         ),
-                        const SizedBox(height: 8),
                         Row(
                           children: [
                             const Icon(
-                              Icons.title,
-                              size: 20,
-                              color: Colors.orange,
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(child: Text('Название: ${task.name}')),
-                          ],
-                        ),
-                        const SizedBox(height: 4),
-                        Row(
-                          children: [
-                            const Icon(
-                              Icons.description,
+                              Icons.assignment_ind,
                               size: 20,
                               color: Colors.teal,
                             ),
                             const SizedBox(width: 8),
-                            Expanded(
-                              child: Text('Описание: ${task.description}'),
-                            ),
+                            Text('Кто взял: ${task.whoTake}'),
                           ],
-                        ),
-                        const SizedBox(height: 4),
-                        Row(
-                          children: [
-                            const Icon(
-                              Icons.timer_outlined,
-                              size: 20,
-                              color: Colors.deepPurple,
-                            ),
-                            const SizedBox(width: 8),
-                            Text('Время взятия: ${task.getTime}'),
-                          ],
-                        ),
-                        const SizedBox(height: 4),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Row(
-                              children: [
-                                const Icon(
-                                  Icons.person,
-                                  size: 20,
-                                  color: Colors.indigo,
-                                ),
-                                const SizedBox(width: 8),
-                                Text('Автор: ${task.author}'),
-                              ],
-                            ),
-                            Row(
-                              children: [
-                                const Icon(
-                                  Icons.assignment_ind,
-                                  size: 20,
-                                  color: Colors.teal,
-                                ),
-                                const SizedBox(width: 8),
-                                Text('Кто взял: ${task.whoTake}'),
-                              ],
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-                        Align(
-                          alignment: Alignment.centerRight,
-                          child: isCompleted
-                              ? const Text(
-                                  'Задача завершена',
-                                  style: TextStyle(
-                                    color: Colors.green,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                )
-                              : ElevatedButton.icon(
-                                  onPressed: () {
-                                    if (task.isNew) {
-                                      _takeTask(task);
-                                    } else {
-                                      _completeTask(task);
-                                    }
-                                  },
-                                  icon: Icon(
-                                    task.isNew ? Icons.play_arrow : Icons.check,
-                                  ),
-                                  label: Text(
-                                    task.isNew
-                                        ? 'Взять в работу'
-                                        : 'Завершить задание',
-                                  ),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: task.isNew
-                                        ? Colors.green
-                                        : Colors.red,
-                                    foregroundColor: Colors.white,
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 20,
-                                      vertical: 12,
-                                    ),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                  ),
-                                ),
                         ),
                       ],
                     ),
-                  ),
-                );
-              },
-            ),
+                    const SizedBox(height: 16),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: isCompleted
+                          ? const Text(
+                        'Задача завершена',
+                        style: TextStyle(
+                          color: Colors.green,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      )
+                          : ElevatedButton.icon(
+                        onPressed: () {
+                          if (task.isNew) {
+                            _takeTask(task);
+                          } else {
+                            _completeTask(task);
+                          }
+                        },
+                        icon: Icon(
+                          task.isNew ? Icons.play_arrow : Icons.check,
+                        ),
+                        label: Text(
+                          task.isNew
+                              ? 'Взять в работу'
+                              : 'Завершить задание',
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: task.isNew
+                              ? Colors.green
+                              : Colors.red,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 20,
+                            vertical: 12,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
+      ),
     );
   }
+
 }
