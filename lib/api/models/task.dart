@@ -5,6 +5,7 @@ class Task {
   final String description;
   String getTime;
   final String author;
+  final String whoTake;
   bool isNew;
   final String id;
 
@@ -14,6 +15,7 @@ class Task {
     required this.description,
     required this.getTime,
     required this.author,
+    required this.whoTake,
     required this.isNew,
     required this.id,
   });
@@ -25,6 +27,7 @@ class Task {
       description: json['description'] ?? '',
       getTime: json['getTime'] ?? '',
       author: json['author'] ?? '',
+      whoTake: json['whoTake'] ?? '',
       isNew: json['isNew'] ?? false,
       id: json['id'].toString(),
     );
