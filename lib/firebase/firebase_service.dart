@@ -12,6 +12,11 @@ import 'package:profit_league_documents/shared/auth_storage.dart';
 import 'package:app_settings/app_settings.dart';
 import 'package:profit_league_documents/firebase/firebase_options.dart';
 import 'package:profit_league_documents/services/notification_helper.dart';
+import 'package:js/js.dart';
+import 'package:js/js_util.dart' as js_util;
+
+@JS('window')
+external dynamic get window;
 
 class FirebaseService {
   static final FirebaseMessaging messaging = FirebaseMessaging.instance;
@@ -65,10 +70,7 @@ class FirebaseService {
       await androidPlugin?.createNotificationChannel(defaultChannel);
     }
 
-    if (kIsWeb) {
-      final fcmToken = await AuthStorage().getFcmToken();
-      // fcmToken можно позже отправить при авторизации
-    } else {
+    if (!kIsWeb) {
       await _requestPermission();
       await _getToken();
     }
@@ -80,15 +82,46 @@ class FirebaseService {
   }
 
   static Future<bool> requestPermissionWeb() async {
+    if (!kIsWeb) {
+      print('[FirebaseService] requestPermissionWeb вызван не в Web');
+      return true;
+    }
+    try {
+      final notification = js_util.getProperty(window, 'Notification');
+      if (notification == null) {
+        print('[FirebaseService] Notification API недоступен');
+        return false;
+      }
+
+      print('[FirebaseService] Запрос разрешения на уведомления (web)...');
+      final permission = await js_util.promiseToFuture<String>(
+        js_util.callMethod(notification, 'requestPermission', []),
+      );
+      print('[FirebaseService] Результат запроса разрешения: $permission');
+
+      return permission == 'granted';
+    } catch (e, st) {
+      print('[FirebaseService] Ошибка запроса разрешения: $e\n$st');
+      return false;
+    }
+  }
+
+  /// Проверка текущего разрешения на уведомления в Web
+  static bool checkPermissionWeb() {
     if (!kIsWeb) return true;
-    final settings = await messaging.requestPermission(
-      alert: true,
-      badge: true,
-      sound: true,
-    );
-    log('🔔 [WEB] Статус разрешения на пуши: ${settings.authorizationStatus}');
-    return settings.authorizationStatus == AuthorizationStatus.authorized ||
-        settings.authorizationStatus == AuthorizationStatus.provisional;
+    try {
+      final notification = js_util.getProperty(window, 'Notification');
+      if (notification == null) {
+        print('[FirebaseService] Notification API недоступен');
+        return false;
+      }
+      final permission = js_util.getProperty(notification, 'permission') as String? ?? 'default';
+      print('[FirebaseService] Текущее разрешение на уведомления: $permission');
+      return permission == 'granted';
+    } catch (e, st) {
+      print('[FirebaseService] Ошибка проверки разрешения: $e\n$st');
+      return false;
+    }
   }
 
   static Future<void> _requestPermission() async {

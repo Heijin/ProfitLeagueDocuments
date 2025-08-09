@@ -1,10 +1,7 @@
 import 'dart:convert';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:crypto/crypto.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
-
-//import 'dart:io';
 import 'package:universal_platform/universal_platform.dart';
 import 'package:profit_league_documents/api/api_client.dart';
 import 'package:profit_league_documents/features/auth/screens/registration_screen.dart';
@@ -86,11 +83,6 @@ class _AuthorizationScreenState extends State<AuthorizationScreen> {
         hasPushSupport = true;
       } else {
         hasPushSupport = false;
-
-        final fcmToken = await AuthStorage().getFcmToken();
-        if (fcmToken != null) {
-          await widget.apiClient.registerPushToken(fcmToken);
-        }
       }
 
       if (hasPushSupport) {
@@ -207,35 +199,6 @@ class _AuthorizationScreenState extends State<AuthorizationScreen> {
                       },
                     ),
                     const SizedBox(height: 24),
-
-                    if (kIsWeb) ...[
-                      ElevatedButton(
-                        onPressed: () async {
-                          final granted =
-                              await FirebaseService.requestPermissionWeb();
-                          if (granted) {
-                            final token = await FirebaseService.getTokenWeb();
-                            if (token != null) {
-                              await AuthStorage().saveFcmToken(token);
-                            } else {
-                              // Можно залогировать или обработать случай с null
-                              print('FCM token is null, not saving');
-                            }
-                          } else {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text(
-                                  'Разрешение на уведомления не получено',
-                                ),
-                              ),
-                            );
-                          }
-                        },
-                        child: const Text('Разрешить уведомления'),
-                      ),
-                      const SizedBox(height: 24),
-                    ],
-
                     _isLoading
                         ? const CircularProgressIndicator()
                         : Column(
