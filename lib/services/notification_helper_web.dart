@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+import 'dart:async';
 import 'package:js/js.dart';
 import 'package:js/js_util.dart' as js_util;
 
@@ -69,4 +71,21 @@ void focusWindow() {
   try {
     js_util.callMethod(window, 'focus', []);
   } catch (_) {}
+}
+
+bool checkPermissionWeb() {
+  if (!kIsWeb) return true;
+  try {
+    final notification = js_util.getProperty(window, 'Notification');
+    if (notification == null) {
+      print('[notification_helper_web] Notification API недоступен');
+      return false;
+    }
+    final permission = js_util.getProperty(notification, 'permission') as String? ?? 'default';
+    print('[notification_helper_web] Текущее разрешение на уведомления: $permission');
+    return permission == 'granted';
+  } catch (e, st) {
+    print('[notification_helper_web] Ошибка проверки разрешения: $e\n$st');
+    return false;
+  }
 }

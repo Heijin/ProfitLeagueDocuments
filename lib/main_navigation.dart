@@ -5,13 +5,14 @@ import 'package:profit_league_documents/features/documents/screens/document_scre
 import 'package:profit_league_documents/features/documents/screens/task_list_screen.dart';
 import 'package:profit_league_documents/features/settings/screens/settings_screen.dart';
 import 'package:profit_league_documents/firebase/firebase_service.dart';
+import 'package:profit_league_documents/services/notification_helper.dart';
 import 'features/notifications/screens/push_details_screen.dart';
 import 'navigation_service.dart';
 import 'package:flutter/foundation.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:js/js.dart';
-@JS('window')
-external dynamic get window;
+@JS('Notification.requestPermission')
+external void requestPermission(void Function(String) callback);
 
 class MainNavigation extends StatefulWidget {
   final ApiClient apiClient;
@@ -43,7 +44,7 @@ class _MainNavigationState extends State<MainNavigation> {
     // Проверяем разрешение для Web
     if (kIsWeb) {
       print('[Web] initState: начинаем проверку разрешения на уведомления...');
-      _isNotificationPermissionGranted = FirebaseService.checkPermissionWeb();
+      _isNotificationPermissionGranted = checkPermissionWeb();
 
       if (_isNotificationPermissionGranted) {
         final fcmToken = await FirebaseMessaging.instance.getToken();
@@ -136,9 +137,7 @@ class _MainNavigationState extends State<MainNavigation> {
                       ElevatedButton(
                         onPressed: () async {
                           print('[Web] Кнопка "Разрешить уведомления" нажата');
-
-                          final granted =
-                              await FirebaseService.requestPermissionWeb();
+                          final granted = await FirebaseService.requestPermissionWeb();
                           setState(() {
                             _isNotificationPermissionGranted = granted;
                           });

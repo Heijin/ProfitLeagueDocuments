@@ -9,3 +9,7 @@ void showWebNotification({
 }) {
   // noop on non-web
 }
+
+bool checkPermissionWeb() {
+  return true;
+}
