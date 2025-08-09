@@ -39,6 +39,17 @@ Future<void> showWebNotification({
     js_util.jsify(options),
   ]);
 
+  // Проверяем наличие type и равенство 'new_task'
+  if (data != null && data['type'] == 'new_task') {
+    try {
+      final audioConstructor = js_util.getProperty(window, 'Audio');
+      final audio = js_util.callConstructor(audioConstructor, ['/sounds/new_task.wav']);
+      js_util.callMethod(audio, 'play', []);
+    } catch (e) {
+      // Игнорируем ошибку, например, если нет доступа к аудио
+    }
+  }
+
   if (onClick != null) {
     // Устанавливаем обработчик onclick уведомления
     js_util.setProperty(notification, 'onclick', allowInterop((event) {
