@@ -1,7 +1,7 @@
 {
     "name": "Профит Лига (документы)",
     "short_name": "Профит Лига",
-    "start_url": "https://exchange.pr-lg.ru/ProfitLeagueDocuments",
+    "start_url": "https://exchange.pr-lg.ru/ProfitLeagueDocuments/",
     "display": "standalone",
     "background_color": "#0175C2",
     "theme_color": "#0175C2",

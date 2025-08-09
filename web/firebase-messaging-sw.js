@@ -21,7 +21,7 @@ messaging.onBackgroundMessage(function(payload) {
     body: payload.notification?.body || '',
     icon: payload.notification?.icon || 'https://exchange.pr-lg.ru/Icons/Icon-192.png',
     data: {
-      click_action: payload.notification?.click_action || 'https://exchange.pr-lg.ru/ProfitLeagueDocuments'
+      click_action: payload.notification?.click_action || 'https://exchange.pr-lg.ru/ProfitLeagueDocuments/'
     }
   };
 
@@ -31,7 +31,7 @@ messaging.onBackgroundMessage(function(payload) {
 // ОБЯЗАТЕЛЬНО: обработка клика по уведомлению
 self.addEventListener('notificationclick', function(event) {
   event.notification.close();
-  const url = event.notification.data?.click_action || 'https://exchange.pr-lg.ru/ProfitLeagueDocuments';
+  const url = event.notification.data?.click_action || 'https://exchange.pr-lg.ru/ProfitLeagueDocuments/';
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then(windowClients => {
       for (let client of windowClients) {

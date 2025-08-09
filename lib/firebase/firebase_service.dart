@@ -11,6 +11,7 @@ import 'package:profit_league_documents/features/notifications/screens/push_deta
 import 'package:profit_league_documents/shared/auth_storage.dart';
 import 'package:app_settings/app_settings.dart';
 import 'package:profit_league_documents/firebase/firebase_options.dart';
+import 'package:profit_league_documents/services/notification_helper.dart';
 
 class FirebaseService {
   static final FirebaseMessaging messaging = FirebaseMessaging.instance;
@@ -169,22 +170,45 @@ class FirebaseService {
       final type = message.data['type'];
       final isNewTask = type == 'new_task';
 
-      if (notification != null && android != null) {
-        final androidDetails = AndroidNotificationDetails(
-          isNewTask ? 'new_task_channel' : 'default_channel',
-          isNewTask ? 'Новые задачи' : 'Обычные уведомления',
-          channelDescription:
-          isNewTask ? 'Канал для новых задач с кастомным звуком' : 'Канал по умолчанию',
-          importance: Importance.max,
-          priority: Priority.high,
-          sound: isNewTask ? RawResourceAndroidNotificationSound('new_task') : null,
-          icon: '@mipmap/ic_launcher',
+      // --- Web: показываем нативный Web Notification ---
+      if (kIsWeb) {
+        final title = notification?.title ?? message.data['title'] ?? '';
+        final body = notification?.body ?? message.data['body'] ?? '';
+        // путь к иконке укажи свой, например '/icons/icon-192.png'
+        showWebNotification(
+          title: title,
+          body: body,
+          data: message.data,
+          icon: '/icons/icon-192.png',
         );
 
-        const iosDetails = DarwinNotificationDetails(
+        return;
+      }
+
+      // --- Mobile (Android / iOS) ---
+      // Если у нас есть объект notification — используем его (ручное отображение через flutter_local_notifications)
+      if (notification != null) {
+        AndroidNotificationDetails? androidDetails;
+        if (android != null) {
+          androidDetails = AndroidNotificationDetails(
+            isNewTask ? 'new_task_channel' : 'default_channel',
+            isNewTask ? 'Новые задачи' : 'Обычные уведомления',
+            channelDescription:
+            isNewTask ? 'Канал для новых задач с кастомным звуком' : 'Канал по умолчанию',
+            importance: Importance.max,
+            priority: Priority.high,
+            sound: isNewTask ? RawResourceAndroidNotificationSound('new_task') : null,
+            icon: '@mipmap/ic_launcher',
+          );
+        }
+
+        final iosDetails = DarwinNotificationDetails(
           presentAlert: true,
           presentBadge: true,
           presentSound: true,
+          // Для кастомного звука на iOS можно указать: sound: 'new_task.caf'
+          // но файл должен быть добавлен в бандл iOS.
+          // sound: isNewTask ? 'new_task.caf' : null,
         );
 
         final details = NotificationDetails(
@@ -196,6 +220,39 @@ class FirebaseService {
           notification.hashCode,
           notification.title,
           notification.body,
+          details,
+          payload: jsonEncode(message.data),
+        );
+        return;
+      }
+
+      // --- Если нет notification, но есть data (data-only message) — можно отобразить локально тоже ---
+      if (message.data.isNotEmpty) {
+        final title = message.data['title'] ?? 'Уведомление';
+        final body = message.data['body'] ?? '';
+        final androidDetails = AndroidNotificationDetails(
+          isNewTask ? 'new_task_channel' : 'default_channel',
+          isNewTask ? 'Новые задачи' : 'Обычные уведомления',
+          channelDescription:
+          isNewTask ? 'Канал для новых задач с кастомным звуком' : 'Канал по умолчанию',
+          importance: Importance.max,
+          priority: Priority.high,
+          sound: isNewTask ? RawResourceAndroidNotificationSound('new_task') : null,
+          icon: '@mipmap/ic_launcher',
+        );
+
+        final iosDetails = DarwinNotificationDetails(
+          presentAlert: true,
+          presentBadge: true,
+          presentSound: true,
+        );
+
+        final details = NotificationDetails(android: androidDetails, iOS: iosDetails);
+
+        flutterLocalNotificationsPlugin.show(
+          title.hashCode,
+          title,
+          body,
           details,
           payload: jsonEncode(message.data),
         );

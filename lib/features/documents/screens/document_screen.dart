@@ -343,17 +343,21 @@ class _DocumentScreenState extends State<DocumentScreen> {
 
   Widget _buildDocumentList() {
     if (documents.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.qr_code, size: 64, color: Colors.grey[400]),
-            const SizedBox(height: 16),
-            const Text(
-              'Отсканируйте QR-код документа',
-              style: TextStyle(color: Colors.grey),
-            ),
-          ],
+      return Align(
+        alignment: Alignment.topCenter,
+        child: Padding(
+          padding: const EdgeInsets.only(top: 100), // насколько вверх поднять
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.qr_code, size: 64, color: Colors.grey[400]),
+              const SizedBox(height: 16),
+              const Text(
+                'Отсканируйте QR-код документа',
+                style: TextStyle(color: Colors.grey),
+              ),
+            ],
+          ),
         ),
       );
     }
