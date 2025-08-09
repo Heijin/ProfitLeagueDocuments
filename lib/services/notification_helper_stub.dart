@@ -5,6 +5,7 @@ void showWebNotification({
   required String body,
   Map<String, dynamic>? data,
   String? icon,
+  void Function()? onClick, // добавлен параметр для совместимости
 }) {
   // noop on non-web
 }

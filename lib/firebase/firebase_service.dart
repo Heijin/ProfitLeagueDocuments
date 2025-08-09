@@ -180,6 +180,18 @@ class FirebaseService {
           body: body,
           data: message.data,
           icon: '/icons/icon-192.png',
+          onClick: () {
+            navigatorKey.currentState?.push(
+              MaterialPageRoute(
+                builder: (_) => PushDetailsScreen(
+                    data: {
+                      'title': message.notification?.title,
+                      'body': message.notification?.body,
+                      ...message.data,
+                    }),
+              ),
+            );
+          },
         );
 
         return;

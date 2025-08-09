@@ -1,6 +1,3 @@
-@JS()
-library notification_helper_web;
-
 import 'package:js/js.dart';
 import 'package:js/js_util.dart' as js_util;
 
@@ -19,12 +16,13 @@ Future<bool> requestNotificationPermission() async {
   return permission == 'granted';
 }
 
-/// Показ уведомления в Web
+/// Показ уведомления в Web с обработчиком клика
 Future<void> showWebNotification({
   required String title,
   required String body,
   String? icon,
   Map<String, dynamic>? data,
+  void Function()? onClick,
 }) async {
   final granted = await requestNotificationPermission();
   if (!granted) return;
@@ -36,13 +34,26 @@ Future<void> showWebNotification({
   };
 
   final notificationConstructor = js_util.getProperty(window, 'Notification');
-  js_util.callConstructor(notificationConstructor, [
+  final notification = js_util.callConstructor(notificationConstructor, [
     title,
     js_util.jsify(options),
   ]);
+
+  if (onClick != null) {
+    // Устанавливаем обработчик onclick уведомления
+    js_util.setProperty(notification, 'onclick', allowInterop((event) {
+      onClick();
+      // Пример: фокусируем окно, если нужно
+      try {
+        js_util.callMethod(window, 'focus', []);
+      } catch (_) {}
+      // Можно закрыть уведомление после клика
+      js_util.callMethod(notification, 'close', []);
+    }));
+  }
 }
 
-/// Фокусировка окна при клике по уведомлению
+/// Фокусировка окна
 void focusWindow() {
   try {
     js_util.callMethod(window, 'focus', []);
