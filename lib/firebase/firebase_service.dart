@@ -5,11 +5,8 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:profit_league_documents/api/api_client.dart';
 import 'package:profit_league_documents/navigation_service.dart';
 import 'package:profit_league_documents/features/notifications/screens/push_details_screen.dart';
-import 'package:profit_league_documents/shared/auth_storage.dart';
-import 'package:app_settings/app_settings.dart';
 import 'package:profit_league_documents/firebase/firebase_options.dart';
 import 'package:profit_league_documents/services/notification_helper.dart';
 
@@ -65,73 +62,10 @@ class FirebaseService {
       await androidPlugin?.createNotificationChannel(defaultChannel);
     }
 
-    if (!kIsWeb) {
-      await _requestPermission();
-      await _getToken();
-    }
-
     _setupForegroundMessageHandler();
     _setupBackgroundMessageHandler();
 
     _initialMessage = await messaging.getInitialMessage();
-  }
-
-  static Future<void> _requestPermission() async {
-    final settings = await messaging.requestPermission(
-      alert: true,
-      badge: true,
-      sound: true,
-    );
-
-    log('🔔 Статус разрешения на пуши: ${settings.authorizationStatus}');
-
-    if (!kIsWeb && settings.authorizationStatus == AuthorizationStatus.denied) {
-      final context = navigatorKey.currentContext;
-      if (context != null) {
-        showDialog(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: const Text('Уведомления отключены'),
-            content: const Text(
-              'Вы отключили уведомления. Вы можете включить их в настройках приложения.',
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Позже'),
-              ),
-              TextButton(
-                onPressed: () async {
-                  Navigator.pop(context);
-                  await AppSettings.openAppSettings();
-                },
-                child: const Text('Открыть настройки'),
-              ),
-            ],
-          ),
-        );
-      } else {
-        log('⚠️ Контекст недоступен для отображения диалога.');
-      }
-    }
-  }
-
-  static Future<void> _getToken() async {
-    final token = await messaging.getToken();
-    log('📱 FCM токен: $token');
-    final accessToken = await AuthStorage().getAccessToken();
-    if (token != null && accessToken != null) {
-      try {
-        await ApiClient().post(
-          '/registerPushToken',
-          body: {'pushToken': token},
-          headers: {'Authorization': 'Bearer $accessToken'},
-        );
-        log('✅ FCM токен отправлен на сервер');
-      } catch (e) {
-        log('❌ Ошибка при отправке FCM токена: $e');
-      }
-    }
   }
 
   static Future<String?> getTokenWeb() async {

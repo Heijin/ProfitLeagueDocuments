@@ -1,4 +1,5 @@
 // lib/main_navigation.dart
+import 'dart:developer';
 import 'package:flutter/material.dart';
 import 'package:profit_league_documents/api/api_client.dart';
 import 'package:profit_league_documents/features/documents/screens/document_screen.dart';
@@ -10,9 +11,7 @@ import 'features/notifications/screens/push_details_screen.dart';
 import 'navigation_service.dart';
 import 'package:flutter/foundation.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
-import 'package:js/js.dart';
-@JS('Notification.requestPermission')
-external void requestPermission(void Function(String) callback);
+import 'package:app_settings/app_settings.dart';
 
 class MainNavigation extends StatefulWidget {
   final ApiClient apiClient;
@@ -39,22 +38,73 @@ class _MainNavigationState extends State<MainNavigation> {
   @override
   Future<void> initState() async {
     super.initState();
+
     _currentIndex = widget.initialTabIndex;
 
-    // Проверяем разрешение для Web
     if (kIsWeb) {
-      print('[Web] initState: начинаем проверку разрешения на уведомления...');
       _isNotificationPermissionGranted = checkPermissionWeb();
+    }
+    else {
+      _isNotificationPermissionGranted = await _requestPermission();
+    }
 
-      if (_isNotificationPermissionGranted) {
-        final fcmToken = await FirebaseMessaging.instance.getToken();
-        if (fcmToken != null) {
-          await widget.apiClient.registerPushToken(fcmToken);
-        }
+    if (_isNotificationPermissionGranted) {
+      final fcmToken = await FirebaseMessaging.instance.getToken();
+      if (fcmToken != null) {
+        await widget.apiClient.registerPushToken(fcmToken);
+      }
+    }
+
+    setState(() {});
+
+  }
+
+  static Future<bool> _requestPermission() async {
+
+    final FirebaseMessaging messaging = FirebaseMessaging.instance;
+    final settings = await messaging.requestPermission(
+      alert: true,
+      badge: true,
+      sound: true,
+    );
+
+    log('🔔 Статус разрешения на пуши: ${settings.authorizationStatus}');
+
+    if (!kIsWeb && settings.authorizationStatus == AuthorizationStatus.authorized)
+      {
+        return true;
       }
 
-      setState(() {});
+    if (!kIsWeb && settings.authorizationStatus == AuthorizationStatus.denied) {
+      final context = navigatorKey.currentContext;
+      if (context != null) {
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Уведомления отключены'),
+            content: const Text(
+              'Вы отключили уведомления. Вы можете включить их в настройках приложения.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Позже'),
+              ),
+              TextButton(
+                onPressed: () async {
+                  Navigator.pop(context);
+                  await AppSettings.openAppSettings();
+                },
+                child: const Text('Открыть настройки'),
+              ),
+            ],
+          ),
+        );
+      } else {
+        log('⚠️ Контекст недоступен для отображения диалога.');
+      }
     }
+    return false;
   }
 
   @override

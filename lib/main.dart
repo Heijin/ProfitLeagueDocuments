@@ -60,9 +60,7 @@ class MyApp extends StatelessWidget {
           elevation: 0,
         ),
         textButtonTheme: TextButtonThemeData(
-          style: TextButton.styleFrom(
-            foregroundColor: Colors.red,
-          ),
+          style: TextButton.styleFrom(foregroundColor: Colors.red),
         ),
       ),
       home: StartScreen(apiClient: _apiClient),
@@ -84,35 +82,41 @@ class _StartScreenState extends State<StartScreen> {
   @override
   void initState() {
     super.initState();
-    _checkAuthAndNavigate();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkAuthAndNavigate();
+    });
   }
 
   Future<void> _checkAuthAndNavigate() async {
     final storage = AuthStorage();
-    final accessToken = await storage.getAccessToken();
-    final expiresAt = await storage.getAccessTokenExpiresAt();
+    //final accessToken = await storage.getAccessToken();
+    final accessToken = await getAccessTokenWithManualTimeout();
+    //final accessToken = null;
 
-    final hasValidToken = accessToken != null &&
-        expiresAt != null &&
-        DateTime.now().isBefore(expiresAt);
+    if (accessToken != null) {
+      final expiresAt = await storage.getAccessTokenExpiresAt();
 
-    if (hasValidToken) {
-      try {
-        final response = await widget.apiClient.get('/ping');
-        if (response.statusCode == 200 && mounted) {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-              builder: (_) => MainNavigation(apiClient: widget.apiClient),
-            ),
-          );
+      final hasValidToken =
+          expiresAt != null && DateTime.now().isBefore(expiresAt);
 
-          // Просто вызываем метод, не сохраняем его результат
-          //FirebaseService.consumeInitialPushData();
+      if (hasValidToken) {
+        try {
+          final response = await widget.apiClient.get('/ping');
+          if (response.statusCode == 200 && mounted) {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (_) => MainNavigation(apiClient: widget.apiClient),
+              ),
+            );
 
-          return;
-        }
-      } catch (_) {}
+            // Просто вызываем метод, не сохраняем его результат
+            //FirebaseService.consumeInitialPushData();
+
+            return;
+          }
+        } catch (_) {}
+      }
     }
 
     if (mounted) {
@@ -125,10 +129,21 @@ class _StartScreenState extends State<StartScreen> {
     }
   }
 
+  Future<String?> getAccessTokenWithManualTimeout({Duration timeout = const Duration(seconds: 3)}) async {
+    try {
+      return await Future.any([
+        AuthStorage().getAccessToken(),
+        Future.delayed(timeout, () => null), // если задержка — вернем null
+      ]);
+    } catch (e) {
+      // Если при чтении токена будет ошибка — тоже вернем null
+      return null;
+    }
+  }
+
+
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
-      body: Center(child: CircularProgressIndicator()),
-    );
+    return const Scaffold(body: Center(child: CircularProgressIndicator()));
   }
 }
