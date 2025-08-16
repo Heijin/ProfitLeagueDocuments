@@ -8,7 +8,6 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:profit_league_documents/navigation_service.dart';
 import 'package:profit_league_documents/features/notifications/screens/push_details_screen.dart';
 import 'package:profit_league_documents/firebase/firebase_options.dart';
-import 'package:profit_league_documents/services/notification_helper.dart';
 
 class FirebaseService {
   static final FirebaseMessaging messaging = FirebaseMessaging.instance;
@@ -38,7 +37,7 @@ class FirebaseService {
     );
 
     // ✅ Создание кастомных Android каналов
-    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+    if (defaultTargetPlatform == TargetPlatform.android) {
       const newTaskChannel = AndroidNotificationChannel(
         'new_task_channel',
         'Новые задачи',
@@ -68,30 +67,6 @@ class FirebaseService {
     _initialMessage = await messaging.getInitialMessage();
   }
 
-  static Future<String?> getTokenWeb() async {
-    if (!kIsWeb) return null;
-    try {
-      final token = await messaging.getToken();
-      log('📱 [WEB] FCM токен: $token');
-      return token;
-    } catch (e) {
-      log('❌ Ошибка получения FCM токена для Web: $e');
-      return null;
-    }
-  }
-
-  static Future<bool> requestPermissionWeb() async {
-    if (!kIsWeb) return true;
-    final settings = await messaging.requestPermission(
-      alert: true,
-      badge: true,
-      sound: true,
-    );
-    log('🔔 [WEB] Статус разрешения на пуши: ${settings.authorizationStatus}');
-    return settings.authorizationStatus == AuthorizationStatus.authorized ||
-        settings.authorizationStatus == AuthorizationStatus.provisional;
-  }
-
   static void _setupForegroundMessageHandler() {
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
       log('📩 Получено push-сообщение (foreground): ${message.data}');
@@ -100,33 +75,6 @@ class FirebaseService {
       final android = notification?.android;
       final type = message.data['type'];
       final isNewTask = type == 'new_task';
-
-      // --- Web: показываем нативный Web Notification ---
-      if (kIsWeb) {
-        final title = notification?.title ?? message.data['title'] ?? '';
-        final body = notification?.body ?? message.data['body'] ?? '';
-        // путь к иконке укажи свой, например '/icons/icon-192.png'
-        showWebNotification(
-          title: title,
-          body: body,
-          data: message.data,
-          icon: '/icons/icon-192.png',
-          onClick: () {
-            navigatorKey.currentState?.push(
-              MaterialPageRoute(
-                builder: (_) => PushDetailsScreen(
-                    data: {
-                      'title': message.notification?.title,
-                      'body': message.notification?.body,
-                      ...message.data,
-                    }),
-              ),
-            );
-          },
-        );
-
-        return;
-      }
 
       // --- Mobile (Android / iOS) ---
       // Если у нас есть объект notification — используем его (ручное отображение через flutter_local_notifications)

@@ -25,10 +25,12 @@ class Task {
       date: json['date'] ?? '',
       name: json['name'] ?? '',
       description: json['description'] ?? '',
-      getTime: json['getTime'] ?? '',
+      getTime: json['getTime'] ?? 'нет',
       author: json['author'] ?? '',
-      whoTake: json['whoTake'] ?? '',
-      isNew: json['isNew'] ?? false,
+      whoTake: json['whoTake'] ?? 'никто',
+      isNew: json['isNew'] is String
+          ? json['isNew'].toLowerCase() == 'true'
+          : json['isNew'] ?? false,
       id: json['id'].toString(),
     );
   }

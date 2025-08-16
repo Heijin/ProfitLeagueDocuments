@@ -6,7 +6,6 @@ import 'package:universal_platform/universal_platform.dart';
 import 'package:profit_league_documents/api/api_client.dart';
 import 'package:profit_league_documents/features/auth/screens/registration_screen.dart';
 import 'package:profit_league_documents/shared/auth_storage.dart';
-import 'package:profit_league_documents/shared/widgets/company_footer.dart';
 import 'package:profit_league_documents/firebase/firebase_service.dart';
 import 'package:profit_league_documents/features/notifications/screens/push_details_screen.dart';
 import 'package:profit_league_documents/navigation_service.dart';
@@ -219,7 +218,6 @@ class _AuthorizationScreenState extends State<AuthorizationScreen> {
               ),
             ),
           ),
-          const CompanyFooter(),
         ],
       ),
     );

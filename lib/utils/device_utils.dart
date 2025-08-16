@@ -5,10 +5,6 @@ import 'dart:developer';
 
 class DeviceUtils {
   static Future<bool> hasGMS() async {
-    if (kIsWeb) {
-      log('🌐 Web-платформа, GMS неприменимо → true');
-      return true;
-    }
 
     if (Platform.isIOS) {
       log('🍏 iOS-платформа, GMS неприменимо → true');

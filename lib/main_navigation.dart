@@ -6,7 +6,6 @@ import 'package:profit_league_documents/features/documents/screens/document_scre
 import 'package:profit_league_documents/features/documents/screens/task_list_screen.dart';
 import 'package:profit_league_documents/features/settings/screens/settings_screen.dart';
 import 'package:profit_league_documents/firebase/firebase_service.dart';
-import 'package:profit_league_documents/services/notification_helper.dart';
 import 'features/notifications/screens/push_details_screen.dart';
 import 'navigation_service.dart';
 import 'package:flutter/foundation.dart';
@@ -36,17 +35,15 @@ class _MainNavigationState extends State<MainNavigation> {
       true; // по умолчанию true, чтобы не блокировать мобилки
 
   @override
-  Future<void> initState() async {
+  void initState() {
     super.initState();
-
+    _initAsync(); // запускаем асинхронную инициализацию
     _currentIndex = widget.initialTabIndex;
+  }
 
-    if (kIsWeb) {
-      _isNotificationPermissionGranted = checkPermissionWeb();
-    }
-    else {
-      _isNotificationPermissionGranted = await _requestPermission();
-    }
+  Future<void> _initAsync() async {
+
+    _isNotificationPermissionGranted = await _requestPermission();
 
     if (_isNotificationPermissionGranted) {
       final fcmToken = await FirebaseMessaging.instance.getToken();
@@ -56,7 +53,6 @@ class _MainNavigationState extends State<MainNavigation> {
     }
 
     setState(() {});
-
   }
 
   static Future<bool> _requestPermission() async {
@@ -70,12 +66,12 @@ class _MainNavigationState extends State<MainNavigation> {
 
     log('🔔 Статус разрешения на пуши: ${settings.authorizationStatus}');
 
-    if (!kIsWeb && settings.authorizationStatus == AuthorizationStatus.authorized)
+    if (settings.authorizationStatus == AuthorizationStatus.authorized)
       {
         return true;
       }
 
-    if (!kIsWeb && settings.authorizationStatus == AuthorizationStatus.denied) {
+    if (settings.authorizationStatus == AuthorizationStatus.denied) {
       final context = navigatorKey.currentContext;
       if (context != null) {
         showDialog(
@@ -159,67 +155,6 @@ class _MainNavigationState extends State<MainNavigation> {
             ],
           ),
         ),
-
-        // Блокирующий overlay с сообщением и кнопкой для запроса разрешения (только Web и если нет разрешения)
-        if (kIsWeb && !_isNotificationPermissionGranted)
-          Positioned.fill(
-            child: Container(
-              color: Colors.black54,
-              alignment: Alignment.topCenter,
-              padding: const EdgeInsets.all(20),
-              child: Material(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(8),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    vertical: 16,
-                    horizontal: 24,
-                  ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Text(
-                        'Для корректной работы приложения\nпожалуйста, разрешите уведомления',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(fontSize: 16),
-                      ),
-                      const SizedBox(height: 12),
-                      ElevatedButton(
-                        onPressed: () async {
-                          print('[Web] Кнопка "Разрешить уведомления" нажата');
-                          final granted = await FirebaseService.requestPermissionWeb();
-                          setState(() {
-                            _isNotificationPermissionGranted = granted;
-                          });
-
-                          print(
-                            '[Web] После запроса разрешения _isNotificationPermissionGranted = $_isNotificationPermissionGranted',
-                          );
-                          if (_isNotificationPermissionGranted) {
-                            final fcmToken = await FirebaseMessaging.instance
-                                .getToken();
-                            if (fcmToken != null) {
-                              await widget.apiClient.registerPushToken(
-                                fcmToken,
-                              );
-                            }
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text(
-                                  'Разрешение на уведомления получено',
-                                ),
-                              ),
-                            );
-                          }
-                        },
-                        child: const Text('Разрешить уведомления'),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
       ],
     );
   }

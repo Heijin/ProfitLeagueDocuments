@@ -13,9 +13,7 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await FirebaseService.initialize();
 
-  if (!kIsWeb) {
-    await _requestNotificationPermissionIfNeeded();
-  }
+  await _requestNotificationPermissionIfNeeded();
 
   runApp(MyApp());
 }

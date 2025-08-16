@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:crypto/crypto.dart';
 import 'package:profit_league_documents/api/api_client.dart';
 import 'package:profit_league_documents/features/auth/screens/authorization_screen.dart';
-import 'package:profit_league_documents/shared/widgets/company_footer.dart';
 import 'package:profit_league_documents/shared/auth_storage.dart';
 
 class RegistrationScreen extends StatefulWidget {
@@ -160,7 +159,6 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
               ),
             ),
           ),
-          const CompanyFooter(),
         ],
       ),
     );
