@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
     <key>FirebaseAppDelegateProxyEnabled</key>
-    <false/>
+    <true/>
     <key>UIBackgroundModes</key>
     <array>
     <string>remote-notification</string>

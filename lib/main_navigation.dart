@@ -8,7 +8,6 @@ import 'package:profit_league_documents/features/settings/screens/settings_scree
 import 'package:profit_league_documents/firebase/firebase_service.dart';
 import 'features/notifications/screens/push_details_screen.dart';
 import 'navigation_service.dart';
-import 'package:flutter/foundation.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:app_settings/app_settings.dart';
 

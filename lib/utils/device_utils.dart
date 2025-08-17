@@ -1,5 +1,4 @@
 import 'dart:io' show Platform;
-import 'package:flutter/foundation.dart';
 import 'package:google_api_availability/google_api_availability.dart';
 import 'dart:developer';
 

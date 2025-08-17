@@ -8,6 +8,11 @@ class Task {
   final String whoTake;
   bool isNew;
   final String id;
+  final String type;
+
+  // новые поля
+  final String doc;
+  final List<String> goods;
 
   Task({
     required this.date,
@@ -18,6 +23,9 @@ class Task {
     required this.whoTake,
     required this.isNew,
     required this.id,
+    required this.type,
+    required this.doc,
+    required this.goods,
   });
 
   factory Task.fromJson(Map<String, dynamic> json) {
@@ -25,13 +33,17 @@ class Task {
       date: json['date'] ?? '',
       name: json['name'] ?? '',
       description: json['description'] ?? '',
-      getTime: json['getTime'] ?? 'нет',
+      getTime: (json['getTime'] as String?)?.isNotEmpty == true ? json['getTime'] : 'нет',
       author: json['author'] ?? '',
-      whoTake: json['whoTake'] ?? 'никто',
-      isNew: json['isNew'] is String
-          ? json['isNew'].toLowerCase() == 'true'
-          : json['isNew'] ?? false,
-      id: json['id'].toString(),
+      whoTake: (json['whoTake'] as String?)?.isNotEmpty == true ? json['whoTake'] : 'никто',
+      isNew: json['isNew'] ?? false,
+      id: json['id'] ?? '',
+      type: json['type'] ?? '',
+      doc: json['doc'] ?? '',
+      goods: (json['goods'] as List<dynamic>?)
+          ?.map((e) => e.toString())
+          .toList() ??
+          [],
     );
   }
 }

@@ -16,17 +16,32 @@ class FirebaseService {
   static RemoteMessage? _initialMessage;
 
   static Future<void> initialize() async {
+    WidgetsFlutterBinding.ensureInitialized();
+
+    // Инициализация Firebase
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
 
+    // Настройки Android
     const AndroidInitializationSettings initializationSettingsAndroid =
     AndroidInitializationSettings('@mipmap/ic_launcher');
 
-    const InitializationSettings initializationSettings = InitializationSettings(
-      android: initializationSettingsAndroid,
+    // Настройки iOS
+    const DarwinInitializationSettings initializationSettingsIOS =
+    DarwinInitializationSettings(
+      requestAlertPermission: true,
+      requestBadgePermission: true,
+      requestSoundPermission: true,
     );
 
+    // Общие настройки
+    const InitializationSettings initializationSettings = InitializationSettings(
+      android: initializationSettingsAndroid,
+      iOS: initializationSettingsIOS,
+    );
+
+    // Инициализация плагина уведомлений
     await flutterLocalNotificationsPlugin.initialize(
       initializationSettings,
       onDidReceiveNotificationResponse: (details) {
@@ -36,7 +51,7 @@ class FirebaseService {
       },
     );
 
-    // ✅ Создание кастомных Android каналов
+    // Создание кастомных Android каналов
     if (defaultTargetPlatform == TargetPlatform.android) {
       const newTaskChannel = AndroidNotificationChannel(
         'new_task_channel',
@@ -53,17 +68,19 @@ class FirebaseService {
         importance: Importance.high,
       );
 
-      final androidPlugin =
-      flutterLocalNotificationsPlugin.resolvePlatformSpecificImplementation<
+      final androidPlugin = flutterLocalNotificationsPlugin
+          .resolvePlatformSpecificImplementation<
           AndroidFlutterLocalNotificationsPlugin>();
 
       await androidPlugin?.createNotificationChannel(newTaskChannel);
       await androidPlugin?.createNotificationChannel(defaultChannel);
     }
 
+    // Обработчики пушей
     _setupForegroundMessageHandler();
     _setupBackgroundMessageHandler();
 
+    // Push при запуске из terminated
     _initialMessage = await messaging.getInitialMessage();
   }
 
@@ -76,30 +93,25 @@ class FirebaseService {
       final type = message.data['type'];
       final isNewTask = type == 'new_task';
 
-      // --- Mobile (Android / iOS) ---
-      // Если у нас есть объект notification — используем его (ручное отображение через flutter_local_notifications)
       if (notification != null) {
-        AndroidNotificationDetails? androidDetails;
-        if (android != null) {
-          androidDetails = AndroidNotificationDetails(
-            isNewTask ? 'new_task_channel' : 'default_channel',
-            isNewTask ? 'Новые задачи' : 'Обычные уведомления',
-            channelDescription:
-            isNewTask ? 'Канал для новых задач с кастомным звуком' : 'Канал по умолчанию',
-            importance: Importance.max,
-            priority: Priority.high,
-            sound: isNewTask ? RawResourceAndroidNotificationSound('new_task') : null,
-            icon: '@mipmap/ic_launcher',
-          );
-        }
+        final androidDetails = android != null
+            ? AndroidNotificationDetails(
+          isNewTask ? 'new_task_channel' : 'default_channel',
+          isNewTask ? 'Новые задачи' : 'Обычные уведомления',
+          channelDescription: isNewTask
+              ? 'Канал для новых задач с кастомным звуком'
+              : 'Канал по умолчанию',
+          importance: Importance.max,
+          priority: Priority.high,
+          sound: isNewTask ? RawResourceAndroidNotificationSound('new_task') : null,
+          icon: '@mipmap/ic_launcher',
+        )
+            : null;
 
-        final iosDetails = DarwinNotificationDetails(
+        final iosDetails = const DarwinNotificationDetails(
           presentAlert: true,
           presentBadge: true,
           presentSound: true,
-          // Для кастомного звука на iOS можно указать: sound: 'new_task.caf'
-          // но файл должен быть добавлен в бандл iOS.
-          // sound: isNewTask ? 'new_task.caf' : null,
         );
 
         final details = NotificationDetails(
@@ -117,28 +129,32 @@ class FirebaseService {
         return;
       }
 
-      // --- Если нет notification, но есть data (data-only message) — можно отобразить локально тоже ---
       if (message.data.isNotEmpty) {
         final title = message.data['title'] ?? 'Уведомление';
         final body = message.data['body'] ?? '';
+
         final androidDetails = AndroidNotificationDetails(
           isNewTask ? 'new_task_channel' : 'default_channel',
           isNewTask ? 'Новые задачи' : 'Обычные уведомления',
-          channelDescription:
-          isNewTask ? 'Канал для новых задач с кастомным звуком' : 'Канал по умолчанию',
+          channelDescription: isNewTask
+              ? 'Канал для новых задач с кастомным звуком'
+              : 'Канал по умолчанию',
           importance: Importance.max,
           priority: Priority.high,
           sound: isNewTask ? RawResourceAndroidNotificationSound('new_task') : null,
           icon: '@mipmap/ic_launcher',
         );
 
-        final iosDetails = DarwinNotificationDetails(
+        final iosDetails = const DarwinNotificationDetails(
           presentAlert: true,
           presentBadge: true,
           presentSound: true,
         );
 
-        final details = NotificationDetails(android: androidDetails, iOS: iosDetails);
+        final details = NotificationDetails(
+          android: androidDetails,
+          iOS: iosDetails,
+        );
 
         flutterLocalNotificationsPlugin.show(
           title.hashCode,
