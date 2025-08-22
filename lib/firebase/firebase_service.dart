@@ -16,7 +16,6 @@ class FirebaseService {
   static RemoteMessage? _initialMessage;
 
   static Future<void> initialize() async {
-    WidgetsFlutterBinding.ensureInitialized();
 
     // Инициализация Firebase
     await Firebase.initializeApp(
@@ -28,6 +27,11 @@ class FirebaseService {
       badge: true,
       sound: true,
     );
+    if (settings.authorizationStatus == AuthorizationStatus.authorized) {
+      log('✅ Пользователь разрешил уведомления');
+    } else {
+      log('⚠️ Пользователь отклонил уведомления');
+    }
 
     // Запрос разрешений на iOS
     if (defaultTargetPlatform == TargetPlatform.iOS) {
@@ -54,7 +58,11 @@ class FirebaseService {
       initSettings,
       onDidReceiveNotificationResponse: (details) {
         if (details.payload != null) {
-          _handleMessage(jsonDecode(details.payload!));
+          try {
+            _handleMessage(jsonDecode(details.payload!));
+          } catch (e) {
+            log('⚠️ Ошибка декодирования payload: $e');
+          }
         }
       },
     );
@@ -80,8 +88,12 @@ class FirebaseService {
           .resolvePlatformSpecificImplementation<
           AndroidFlutterLocalNotificationsPlugin>();
 
-      await androidPlugin?.createNotificationChannel(newTaskChannel);
-      await androidPlugin?.createNotificationChannel(defaultChannel);
+      if (androidPlugin != null) {
+        await androidPlugin.createNotificationChannel(newTaskChannel);
+        await androidPlugin.createNotificationChannel(defaultChannel);
+      } else {
+        log('⚠️ Не удалось получить AndroidFlutterLocalNotificationsPlugin');
+      }
     }
 
     // Обработчики пушей
