@@ -1,4 +1,6 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:crypto/crypto.dart';
 import 'package:profit_league_documents/api/api_client.dart';
 import 'package:profit_league_documents/shared/auth_storage.dart';
 import 'package:profit_league_documents/features/auth/screens/validators.dart';
@@ -14,10 +16,16 @@ class ResetPasswordScreen extends StatefulWidget {
 
 class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _emailFormKey = GlobalKey<FormState>(); // отдельный ключ для email
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _codeController = TextEditingController();
+
+  String? _emailError;
+  String? _passwordError;
+  String? _codeError;
+  String? _infoMessage;
+
+  bool _isLoading = false;
 
   @override
   void initState() {
@@ -34,22 +42,102 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
     }
   }
 
-  void _requestCode() {
-    if (_emailFormKey.currentState!.validate()) {
-      // заглушка
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Запрос кода отправлен (заглушка)')),
-      );
+  Future<void> _requestCode() async {
+    setState(() {
+      _emailError = null;
+      _infoMessage = null;
+      _isLoading = true;
+    });
+
+    final email = _emailController.text.trim();
+    if (!Validators.isValidEmail(email)) {
+      setState(() {
+        _emailError = 'Введите корректный email';
+        _isLoading = false;
+      });
+      return;
+    }
+
+    try {
+      final response = await widget.apiClient.get("/resetCode?email=$email", withAuth: false);
+
+      if (response.statusCode == 200) {
+        setState(() {
+          _infoMessage = 'Код сброса отправлен на почту';
+        });
+      } else {
+        final data = jsonDecode(response.body);
+        setState(() {
+          _infoMessage = 'Ошибка: ${data['message'] ?? 'Неизвестная ошибка'}';
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _infoMessage = 'Ошибка: $e';
+      });
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
-  void _setNewPassword() {
-    if (!_formKey.currentState!.validate()) return;
+  Future<void> _setNewPassword() async {
+    setState(() {
+      _emailError = null;
+      _passwordError = null;
+      _codeError = null;
+      _infoMessage = null;
+      _isLoading = true;
+    });
 
-    // заглушка
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Пароль обновлён (заглушка)')),
-    );
+    final email = _emailController.text.trim();
+    final password = _passwordController.text;
+    final code = _codeController.text.trim();
+
+    bool hasError = false;
+
+    if (!Validators.isValidEmail(email)) {
+      _emailError = 'Введите корректный email';
+      hasError = true;
+    }
+
+    final passwordValidation = Validators.validatePassword(password);
+    if (passwordValidation != null) {
+      _passwordError = passwordValidation;
+      hasError = true;
+    }
+
+    if (code.isEmpty) {
+      _codeError = 'Введите код сброса';
+      hasError = true;
+    }
+
+    if (hasError) {
+      setState(() => _isLoading = false);
+      return;
+    }
+
+    try {
+      final passwordHash = sha1.convert(utf8.encode(password)).toString();
+      final uri = '/resetPassword?email=$email&password=$passwordHash&code=$code';
+      final response = await widget.apiClient.get(uri, withAuth: false);
+
+      if (response.statusCode == 200) {
+        setState(() {
+          _infoMessage = 'Новый пароль успешно установлен';
+        });
+      } else {
+        final data = jsonDecode(response.body);
+        setState(() {
+          _infoMessage = 'Ошибка: ${data['message'] ?? 'Неизвестная ошибка'}';
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _infoMessage = 'Ошибка: $e';
+      });
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
   }
 
   @override
@@ -58,66 +146,66 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
       appBar: AppBar(title: const Text('Сброс пароля'), backgroundColor: Colors.green),
       body: Padding(
         padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            Form(
-              key: _emailFormKey,
-              child: TextFormField(
+        child: Form(
+          key: _formKey,
+          child: Column(
+            children: [
+              TextFormField(
                 controller: _emailController,
-                decoration: const InputDecoration(labelText: 'Почта'),
+                decoration: InputDecoration(
+                  labelText: 'Почта',
+                  errorText: _emailError,
+                ),
                 keyboardType: TextInputType.emailAddress,
-                validator: (value) {
-                  if (!Validators.isValidEmail(value)) {
-                    return 'Введите корректный email';
-                  }
-                  return null;
-                },
               ),
-            ),
-            const SizedBox(height: 12),
-            Form(
-              key: _formKey,
-              child: Column(
-                children: [
-                  TextFormField(
-                    controller: _passwordController,
-                    decoration: const InputDecoration(labelText: 'Новый пароль'),
-                    obscureText: true,
-                    validator: Validators.validatePassword,
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _passwordController,
+                decoration: InputDecoration(
+                  labelText: 'Новый пароль',
+                  errorText: _passwordError,
+                ),
+                obscureText: true,
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _codeController,
+                decoration: InputDecoration(
+                  labelText: 'Код сброса',
+                  errorText: _codeError,
+                ),
+              ),
+              const SizedBox(height: 24),
+              if (_infoMessage != null)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: Text(
+                    _infoMessage!,
+                    style: const TextStyle(color: Colors.green),
+                    textAlign: TextAlign.center,
                   ),
-                  const SizedBox(height: 12),
-                  TextFormField(
-                    controller: _codeController,
-                    decoration: const InputDecoration(labelText: 'Код сброса'),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Введите код сброса';
-                      }
-                      return null;
-                    },
+                ),
+              Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: _isLoading ? null : _requestCode,
+                      child: const Text('Запросить код'),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: _isLoading ? null : _setNewPassword,
+                      child: const Text('Установить новый пароль'),
+                    ),
                   ),
                 ],
               ),
-            ),
-            const SizedBox(height: 24),
-            Row(
-              children: [
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: _requestCode,
-                    child: const Text('Запросить код'),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: _setNewPassword,
-                    child: const Text('Установить новый пароль'),
-                  ),
-                ),
-              ],
-            ),
-          ],
+              if (_isLoading) const SizedBox(height: 12),
+              if (_isLoading) const LinearProgressIndicator(),
+            ],
+          ),
         ),
       ),
     );
