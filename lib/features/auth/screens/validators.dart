@@ -19,9 +19,9 @@ class Validators {
     if (!RegExp(r'\d').hasMatch(value)) {
       return 'Пароль должен содержать цифры';
     }
-    if (!RegExp(r'[!@#\$%^&*(),.?":{}|<>]').hasMatch(value)) {
-      return 'Пароль должен содержать спец. символ';
-    }
+    // if (!RegExp(r'[!@#\$%^&*(),.?":{}|<>]').hasMatch(value)) {
+    //   return 'Пароль должен содержать спец. символ';
+    // }
     return null;
   }
 }

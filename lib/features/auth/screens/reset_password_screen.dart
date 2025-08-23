@@ -24,6 +24,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
   String? _passwordError;
   String? _codeError;
   String? _infoMessage;
+  bool _isErrorMessage = false;
 
   bool _isLoading = false;
 
@@ -46,6 +47,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
     setState(() {
       _emailError = null;
       _infoMessage = null;
+      _isErrorMessage = false;
       _isLoading = true;
     });
 
@@ -64,16 +66,19 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
       if (response.statusCode == 200) {
         setState(() {
           _infoMessage = 'Код сброса отправлен на почту';
+          _isErrorMessage = false;
         });
       } else {
         final data = jsonDecode(response.body);
         setState(() {
           _infoMessage = 'Ошибка: ${data['message'] ?? 'Неизвестная ошибка'}';
+          _isErrorMessage = true;
         });
       }
     } catch (e) {
       setState(() {
         _infoMessage = 'Ошибка: $e';
+        _isErrorMessage = true;
       });
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -86,6 +91,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
       _passwordError = null;
       _codeError = null;
       _infoMessage = null;
+      _isErrorMessage = false;
       _isLoading = true;
     });
 
@@ -124,16 +130,19 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
       if (response.statusCode == 200) {
         setState(() {
           _infoMessage = 'Новый пароль успешно установлен';
+          _isErrorMessage = false;
         });
       } else {
         final data = jsonDecode(response.body);
         setState(() {
           _infoMessage = 'Ошибка: ${data['message'] ?? 'Неизвестная ошибка'}';
+          _isErrorMessage = true;
         });
       }
     } catch (e) {
       setState(() {
         _infoMessage = 'Ошибка: $e';
+        _isErrorMessage = true;
       });
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -181,7 +190,9 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                   padding: const EdgeInsets.only(bottom: 12),
                   child: Text(
                     _infoMessage!,
-                    style: const TextStyle(color: Colors.green),
+                    style: TextStyle(
+                      color: _isErrorMessage ? Colors.red : Colors.green,
+                    ),
                     textAlign: TextAlign.center,
                   ),
                 ),

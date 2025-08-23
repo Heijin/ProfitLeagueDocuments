@@ -68,4 +68,12 @@ class AuthStorage {
   Future<void> saveEmail(String email) async {
     await _storage.write(key: _kEmail, value: email);
   }
+  // Новые методы для отдельного сохранения токенов
+  Future<void> saveAccessToken(String token) async {
+    await _storage.write(key: _kAccessToken, value: token);
+  }
+
+  Future<void> saveRefreshToken(String token) async {
+    await _storage.write(key: _kRefreshToken, value: token);
+  }
 }
