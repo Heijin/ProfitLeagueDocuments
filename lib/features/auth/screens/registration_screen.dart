@@ -4,6 +4,7 @@ import 'package:crypto/crypto.dart';
 import 'package:profit_league_documents/api/api_client.dart';
 import 'package:profit_league_documents/features/auth/screens/authorization_screen.dart';
 import 'package:profit_league_documents/shared/auth_storage.dart';
+import 'package:profit_league_documents/features/auth/screens//validators.dart';
 
 class RegistrationScreen extends StatefulWidget {
   final ApiClient apiClient;
@@ -72,19 +73,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   }
 
   String? _validatePassword(String? value) {
-    if (value == null || value.length < 6) {
-      return 'Пароль должен быть не менее 6 символов';
-    }
-    if (!RegExp(r'[A-ZА-Яa-zа-я]').hasMatch(value)) {
-      return 'Пароль должен содержать буквы';
-    }
-    if (!RegExp(r'\d').hasMatch(value)) {
-      return 'Пароль должен содержать цифры';
-    }
-    if (!RegExp(r'[!@#\$%^&*(),.?":{}|<>]').hasMatch(value)) {
-      return 'Пароль должен содержать спец. символ';
-    }
-    return null;
+    return Validators.validatePassword(value);
   }
 
   @override
@@ -134,7 +123,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                       decoration: const InputDecoration(labelText: 'Почта'),
                       keyboardType: TextInputType.emailAddress,
                       validator: (value) {
-                        if (value == null || !RegExp(r'^\S+@\S+\.\S+$').hasMatch(value)) {
+                        if (value == null || !Validators.isValidEmail(value)) {
                           return 'Введите корректный email';
                         }
                         return null;

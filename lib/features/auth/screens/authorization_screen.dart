@@ -5,12 +5,14 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:universal_platform/universal_platform.dart';
 import 'package:profit_league_documents/api/api_client.dart';
 import 'package:profit_league_documents/features/auth/screens/registration_screen.dart';
+import 'package:profit_league_documents/features/auth/screens/reset_password_screen.dart'; // 👈 добавили
 import 'package:profit_league_documents/shared/auth_storage.dart';
 import 'package:profit_league_documents/firebase/firebase_service.dart';
 import 'package:profit_league_documents/features/notifications/screens/push_details_screen.dart';
 import 'package:profit_league_documents/navigation_service.dart';
 import 'package:profit_league_documents/main_navigation.dart';
 import 'package:profit_league_documents/utils/device_utils.dart';
+import 'package:profit_league_documents/features/auth/screens//validators.dart';
 
 class AuthorizationScreen extends StatefulWidget {
   final ApiClient apiClient;
@@ -137,6 +139,15 @@ class _AuthorizationScreenState extends State<AuthorizationScreen> {
     );
   }
 
+  void _navigateToResetPassword() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ResetPasswordScreen(apiClient: widget.apiClient),
+      ),
+    );
+  }
+
   @override
   void dispose() {
     _emailController.dispose();
@@ -178,7 +189,7 @@ class _AuthorizationScreenState extends State<AuthorizationScreen> {
                       keyboardType: TextInputType.emailAddress,
                       validator: (value) {
                         if (value == null ||
-                            !RegExp(r'^\S+@\S+\.\S+$').hasMatch(value)) {
+                            !Validators.isValidEmail(value)) {
                           return 'Введите корректный email';
                         }
                         return null;
@@ -201,18 +212,23 @@ class _AuthorizationScreenState extends State<AuthorizationScreen> {
                     _isLoading
                         ? const CircularProgressIndicator()
                         : Column(
-                            children: [
-                              ElevatedButton(
-                                onPressed: _login,
-                                child: const Text('Войти'),
-                              ),
-                              const SizedBox(height: 12),
-                              TextButton(
-                                onPressed: _navigateToRegistration,
-                                child: const Text('Зарегистрироваться'),
-                              ),
-                            ],
-                          ),
+                      children: [
+                        ElevatedButton(
+                          onPressed: _login,
+                          child: const Text('Войти'),
+                        ),
+                        const SizedBox(height: 12),
+                        TextButton(
+                          onPressed: _navigateToRegistration,
+                          child: const Text('Зарегистрироваться'),
+                        ),
+                        const SizedBox(height: 12),
+                        TextButton(
+                          onPressed: _navigateToResetPassword,
+                          child: const Text('Забыли пароль?'),
+                        ),
+                      ],
+                    ),
                   ],
                 ),
               ),
