@@ -39,19 +39,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
         content: const Text('Вы уверены, что хотите сменить пользователя?'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Отмена'),
-          ),
-          ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.green),
             child: const Text('Да'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Нет'),
           ),
         ],
       ),
     );
 
     if (confirm == true) {
-      // Очищаем сохранённый refresh_token (или всю авторизацию)
+      // Очищаем сохранённый refresh_token и access_token
       await _storage.saveRefreshToken('');
       await _storage.saveAccessToken('');
 
