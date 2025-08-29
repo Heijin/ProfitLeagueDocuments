@@ -132,6 +132,16 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
           _infoMessage = 'Новый пароль успешно установлен';
           _isErrorMessage = false;
         });
+
+        Future.delayed(const Duration(seconds: 1), () {
+          if (mounted) {
+            Navigator.pop(context, {
+              'email': email,
+              'password': password,
+            });
+          }
+        });
+
       } else {
         final data = jsonDecode(response.body);
         setState(() {

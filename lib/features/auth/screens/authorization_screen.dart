@@ -139,14 +139,30 @@ class _AuthorizationScreenState extends State<AuthorizationScreen> {
     );
   }
 
-  void _navigateToResetPassword() {
-    Navigator.push(
+  void _navigateToResetPassword() async {
+    final result = await Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => ResetPasswordScreen(apiClient: widget.apiClient),
       ),
     );
+
+    if (result != null && result is Map<String, String>) {
+      final email = result['email'] ?? '';
+      final password = result['password'] ?? '';
+
+      setState(() {
+        _emailController.text = email;
+        _passwordController.text = password;
+      });
+
+      // Автоматический вход
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _login();
+      });
+    }
   }
+
 
   @override
   void dispose() {
