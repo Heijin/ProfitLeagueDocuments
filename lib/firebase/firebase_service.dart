@@ -7,7 +7,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:profit_league_documents/navigation_service.dart';
 import 'package:profit_league_documents/features/notifications/screens/push_details_screen.dart';
-import 'package:profit_league_documents/firebase/firebase_options.dart';
+import 'package:profit_league_documents/firebase_options.dart';
 
 class FirebaseService {
   static final FirebaseMessaging messaging = FirebaseMessaging.instance;

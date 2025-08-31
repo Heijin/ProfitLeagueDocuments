@@ -8,12 +8,23 @@ import 'package:profit_league_documents/shared/auth_storage.dart';
 import 'package:profit_league_documents/firebase/firebase_service.dart';
 import 'package:profit_league_documents/navigation_service.dart';
 import 'package:profit_league_documents/main_navigation.dart';
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
+
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await FirebaseService.initialize();
 
+  // Pass Flutter errors to Crashlytics
+  FlutterError.onError = FirebaseCrashlytics.instance.recordFlutterFatalError;
   await _requestNotificationPermissionIfNeeded();
+
+  // Disable Crashlytics in debug mode (optional)
+  if (kDebugMode) {
+    await FirebaseCrashlytics.instance.setCrashlyticsCollectionEnabled(false);
+  } else {
+    await FirebaseCrashlytics.instance.setCrashlyticsCollectionEnabled(true);
+  }
 
   runApp(MyApp());
 }

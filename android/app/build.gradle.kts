@@ -5,6 +5,7 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
     // Add the Google services Gradle plugin
     id("com.google.gms.google-services")
+    id("com.google.firebase.crashlytics")
 
 }
 
@@ -49,7 +50,7 @@ flutter {
 
 dependencies {
     // Import the Firebase BoM
-    implementation(platform("com.google.firebase:firebase-bom:34.0.0"))
+    implementation(platform("com.google.firebase:firebase-bom:34.2.0"))
 
     implementation("com.google.firebase:firebase-messaging")
 
