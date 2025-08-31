@@ -59,10 +59,10 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions ios = FirebaseOptions(
     apiKey: 'AIzaSyAutz_L3VIxdzSec-rroyztfls-v2H-B80',
-    appId: '1:555319309212:ios:cbed8319645789d4578e59',
+    appId: '1:555319309212:ios:35cdfaa7029627f7578e59',
     messagingSenderId: '555319309212',
     projectId: 'profit-league-documents',
     storageBucket: 'profit-league-documents.firebasestorage.app',
-    iosBundleId: 'ru.prlg.profit-league-documents',
+    iosBundleId: 'ru.prlg.warehouse',
   );
 }
