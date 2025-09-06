@@ -12,6 +12,7 @@ import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 
 
 void main() async {
+
   WidgetsFlutterBinding.ensureInitialized();
   await FirebaseService.initialize();
 
